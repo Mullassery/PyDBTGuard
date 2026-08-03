@@ -9,12 +9,19 @@ pub enum NodeType {
     Exposure,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
+#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
 pub struct Node {
     pub id: String,
     pub name: String,
     pub node_type: NodeType,
     pub metadata: HashMap<String, String>,
+}
+
+impl std::hash::Hash for Node {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.id.hash(state);
+        self.name.hash(state);
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

@@ -1,36 +1,32 @@
-PYDBGGUARD PROPRIETARY LICENSE
+Proprietary License — Free to use with explicit attribution
 
 Copyright (c) 2026 Georgi Mammen Mullassery
 
-All rights reserved.
+TERMS AND CONDITIONS:
 
-GRANT OF LICENSE
-The copyright holder grants you a worldwide, royalty-free, non-exclusive license to use, copy, modify, and distribute this software, subject to the terms and conditions below.
+1. GRANT OF LICENSE
+   This software is provided free of charge under a proprietary license.
+   You are granted a non-exclusive, royalty-free, worldwide license to use,
+   copy, modify, and distribute this software and its documentation.
 
-TERMS AND CONDITIONS
+2. ATTRIBUTION REQUIREMENT
+   You MUST include the following attribution in any documentation, code comments,
+   or materials that reference or use this software:
 
-1. Use of Software
-   You are permitted to use this software for any purpose, including commercial applications.
+   "Powered by PyDBTGuard (https://github.com/Mullassery/PyDBTGuard)"
 
-2. Modification
-   You may modify the software for your own use. Modified versions may be distributed under the same license terms.
+   Attribution must be maintained in all copies, modifications, and derivative works.
 
-3. Distribution
-   If you distribute this software or modified versions, you must:
-   a. Include a copy of this license
-   b. State significant changes made to the software
-   c. Include the original copyright notice
+3. DISCLAIMER OF WARRANTY
+   THIS SOFTWARE IS PROVIDED "AS IS" WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
+   INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
+   PARTICULAR PURPOSE, AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+   COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES, OR OTHER LIABILITY, WHETHER
+   IN AN ACTION OF CONTRACT, TORT, OR OTHERWISE, ARISING FROM, OUT OF, OR IN
+   CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-4. Proprietary Notice
-   The software is provided as-is. The copyright holder retains all ownership rights to the original source code.
+4. THIRD-PARTY COMPONENTS
+   This software incorporates open-source components licensed under their respective
+   licenses. See the documentation and source code for details.
 
-5. No Warranty
-   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
-
-6. Limitation of Liability
-   IN NO EVENT SHALL THE AUTHOR OR COPYRIGHT HOLDER BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-
-7. Termination
-   This license is effective until terminated. Your rights under this license will terminate automatically without notice if you fail to comply with any terms.
-
-END OF LICENSE
+For licensing inquiries, contact: mullassery@gmail.com
