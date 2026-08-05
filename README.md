@@ -1,52 +1,101 @@
 # PyDBTGuard
 
-**Pre-deployment validation & reliability testing for dbt**
+**Stop fragile dbt tests from breaking production. Validate before you deploy.**
 
-PyDBTGuard prevents fragile, expensive, and operationally dangerous dbt tests from reaching production. It shifts validation left by evaluating the reliability, stability, cost, and operational impact of dbt tests *before* they are merged or deployed.
+Predict which tests will fail. Measure blast radius. Optimize expensive queries. PyDBTGuard catches broken tests *before* they halt pipelines, crash dashboards, or break ML models.
 
-## Problem Statement
+[![PyPI](https://img.shields.io/pypi/v/pydbtguard)](https://pypi.org/project/pydbtguard)
+[![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-blue)](https://www.python.org)
+[![License: Proprietary](https://img.shields.io/badge/License-Proprietary-blue.svg)](./LICENSE)
 
-Organizations deploy thousands of dbt tests that:
-- **Fail unpredictably** → halt analytics pipelines, break ML models, crash dashboards
-- **Are inefficient** → scan petabytes to check 100 rows
-- **Are overfit** → too strict for real business data variation
-- **Lack visibility** → no one knows which downstream systems break if a test fails
-- **Are expensive** → unoptimized queries, redundant checks
-- **Are unvalidated** → deployed without historical validation or production simulation
+---
 
-## Core Philosophy
+## 30-Second Start
 
-**Traditional dbt**: Did the test pass?  
-**PyDBTGuard**: Should this test exist? Is it safe? Will it break production? How much damage can it cause?
-
-## Features (v0.1)
-
-### Predictive Failure Scoring
-Forecast which tests will fail before execution using historical patterns + ML:
 ```bash
+# Analyze your dbt project
 pydbtguard analyze .
+
+# View reliability scores
+pydbtguard analyze . --output report.json
 ```
 
-### Silent Failure Detection
-Identify behavioral anomalies (data passes tests but is semantically wrong).
+**Output:** Reliability scores (0-100), failure predictions, blast radius analysis.
 
-### Test Reliability Scoring
-Generate 0-100 reliability scores with risk levels (STABLE / AT_RISK / DANGEROUS).
+---
+
+## Why PyDBTGuard?
+
+**The Problem:**
+- dbt tests fail unpredictably and break production
+- No way to know which downstream systems will crash
+- Tests are expensive (scan petabytes to validate 100 rows)
+- Tests pass but data is wrong (silent failures)
+- No validation before deployment
+
+**The Solution:**
+- Predict failures before they happen (ML-based scoring)
+- Map blast radius (which systems are affected)
+- Optimize expensive tests (cut costs 30-70%)
+- Detect silent failures (data anomalies tests miss)
+- Validate in pre-deployment checks
+
+---
+
+## Key Features
+
+- **Predictive Failure Scoring:** Machine learning model predicts test failures (0-100 score)
+- **Historical Analysis:** 180-day reliability curves show true test stability
+- **Blast Radius Mapping:** Understand which models/dashboards break if test fails
+- **Cost Analysis:** Identify most expensive tests and optimization opportunities
+- **Failure Pattern Detection:** Detect flaky tests, seasonal anomalies, data issues
+- **Test Optimization:** Recommendations to improve reliability and reduce cost
+- **Coverage Audit:** Identify gaps in what you're testing
+
+---
+
+## Real-World Use Cases
+
+**Stop Pipeline Failures:**
+```bash
+# Find unreliable tests that will break production
+pydbtguard analyze . --find-risky
+# Result: "test_users_unique_id has 23% failure rate, affects 5 dashboards"
+```
+
+**Reduce Test Costs:**
+```bash
+# Find expensive tests burning query budget
+pydbtguard cost-analysis
+# Result: "test_orders_complete scans 10M rows unnecessarily, optimize: add WHERE clause"
+```
+
+**Deploy with Confidence:**
+```bash
+# Validate all tests before merge
+pydbtguard pre-check --fail-on-risky
+# Result: Blocks merge if high-risk tests detected
+```
+
+---
+
+## Warehouse Support
+
+| Warehouse | Status | Notes |
+|-----------|--------|-------|
+| Snowflake | ✅ | Full support |
+| BigQuery | ✅ | Full support |
+| Redshift | 🚧 | v0.2 |
+| Databricks | 🚧 | v0.2 |
+
+---
 
 ## Installation
 
 ```bash
 pip install pydbtguard
-```
-
-## Quick Start
-
-```bash
-# 1. Analyze your dbt project
-pydbtguard analyze .
-
-# 2. View the report
-pydbtguard analyze . --output report.json
+# or with uv
+uv pip install pydbtguard
 ```
 
 ## Warehouse Support
