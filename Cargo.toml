@@ -1,5 +1,5 @@
 [workspace]
-members = ["crates/pydbtguard-core"]
+members = ["crates/pydbtguard-core", "bindings/python"]
 resolver = "2"
 
 [workspace.package]

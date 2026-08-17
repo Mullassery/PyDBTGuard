@@ -22,7 +22,7 @@ def sample_manifest():
                     "freshness": {"warn_after": {"count": 6}},
                 },
                 "depends_on": {"nodes": ["source.test.raw_users"]},
-                "columns": {id: {}, email: {}, created_at: {}},
+                "columns": {"id": {}, "email": {}, "created_at": {}},
             },
             "model.test.orders": {
                 "unique_id": "model.test.orders",

@@ -4,7 +4,6 @@ from typing import List, Dict, Any, Optional, Set
 from dataclasses import asdict
 
 from pydbtguard.models.schemas import BlastRadiusAnalysis
-from pydbtguard.dbt.manifest import dbtManifestNode
 
 
 class BlastRadiusAnalyzer:
