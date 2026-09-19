@@ -18,7 +18,7 @@ impl CostCalculator {
             bytes_scanned,
             warehouse_credits: credits,
             estimated_cost_usd: cost_usd,
-            execution_time_ms: (bytes_scanned as u64 / 1024 / 1024 + 50), // Simplified estimation
+            execution_time_ms: (bytes_scanned / 1024 / 1024 + 50), // Simplified estimation
         }
     }
 

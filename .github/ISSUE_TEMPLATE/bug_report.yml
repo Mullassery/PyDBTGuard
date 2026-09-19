@@ -1,0 +1,45 @@
+name: Bug report
+description: Report something that doesn't work
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Before filing, please check [ROADMAP_HONEST.md](https://github.com/Mullassery/PyDBTGuard/blob/main/ROADMAP_HONEST.md) — several known-broken behaviors (packaging failure, fabricated replay data, inverted blast radius) are already documented there and don't need a new issue unless you have a fix.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What did you run, and what happened instead of what you expected?
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      description: Exact commands, including how you installed/ran PyDBTGuard.
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version / commit
+      description: Output of `pydbtguard --version` or the git commit hash you're on.
+    validations:
+      required: true
+  - type: dropdown
+    id: os
+    attributes:
+      label: OS
+      options:
+        - macOS
+        - Linux
+        - Windows
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant output / traceback
+      render: shell

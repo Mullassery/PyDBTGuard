@@ -1,0 +1,26 @@
+name: Feature request
+description: Suggest something new
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        This project has a lot of built-but-not-wired-up or partially-broken functionality already (see [ROADMAP_HONEST.md](https://github.com/Mullassery/PyDBTGuard/blob/main/ROADMAP_HONEST.md)). If your request is close to something already listed there, please reference it.
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem does this solve?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+    validations:
+      required: false
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+    validations:
+      required: false

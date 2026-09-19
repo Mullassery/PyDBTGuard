@@ -71,9 +71,14 @@ impl FailurePatternDetector {
 
             // Check for cardinality spike in any column
             for col in &curr.columns {
-                if let Some(prev_col) = prev.columns.iter().find(|c| c.column_name == col.column_name) {
+                if let Some(prev_col) = prev
+                    .columns
+                    .iter()
+                    .find(|c| c.column_name == col.column_name)
+                {
                     if col.unique_count > 0 && prev_col.unique_count > 0 {
-                        let cardinality_ratio = (col.unique_count as f64) / (prev_col.unique_count as f64);
+                        let cardinality_ratio =
+                            (col.unique_count as f64) / (prev_col.unique_count as f64);
                         if cardinality_ratio < 0.5 {
                             // Cardinality dropped by >50%
                             pattern.evidence.push(format!(
@@ -95,7 +100,8 @@ impl FailurePatternDetector {
             } else {
                 "MEDIUM".to_string()
             };
-            pattern.description = "Detected duplicate spike: cardinality decreased significantly".to_string();
+            pattern.description =
+                "Detected duplicate spike: cardinality decreased significantly".to_string();
             pattern.suggested_fix = "Check for duplicate rows or incorrect joins".to_string();
             Some(pattern)
         } else {
@@ -126,11 +132,15 @@ impl FailurePatternDetector {
 
         // If coefficient of variation > 0.2, likely seasonal
         if stddev / mean > 0.2 {
-            let mut pattern = FailurePattern::new(PatternType::SeasonalAnomaly, test_name.to_string());
+            let mut pattern =
+                FailurePattern::new(PatternType::SeasonalAnomaly, test_name.to_string());
             pattern.description = "Detected seasonal variation in table size".to_string();
             pattern.confidence = (stddev / mean / 0.4).min(1.0);
             pattern.severity = "MEDIUM".to_string();
-            pattern.evidence.push(format!("Row count mean: {:.0}, stddev: {:.0}", mean, stddev));
+            pattern.evidence.push(format!(
+                "Row count mean: {:.0}, stddev: {:.0}",
+                mean, stddev
+            ));
             pattern.suggested_fix = "Consider using seasonal adjustments in test logic".to_string();
             patterns.push(pattern);
         }
@@ -157,15 +167,18 @@ impl FailurePatternDetector {
         let row_increase = (curr.row_count as i64) - (prev.row_count as i64);
         if row_increase > (prev.row_count as i64 / 2) {
             // > 50% increase
-            let mut pattern = FailurePattern::new(PatternType::BackfillSensitivity, test_name.to_string());
+            let mut pattern =
+                FailurePattern::new(PatternType::BackfillSensitivity, test_name.to_string());
             pattern.description = "Detected bulk insert/backfill operation".to_string();
             pattern.confidence = 0.8;
             pattern.severity = "MEDIUM".to_string();
-            pattern.evidence.push(format!("Row count increased by {} ({:.1}%)",
+            pattern.evidence.push(format!(
+                "Row count increased by {} ({:.1}%)",
                 row_increase,
                 (row_increase as f64 / prev.row_count as f64 * 100.0)
             ));
-            pattern.suggested_fix = "Consider adding incremental validation or sample-based testing".to_string();
+            pattern.suggested_fix =
+                "Consider adding incremental validation or sample-based testing".to_string();
             Some(pattern)
         } else {
             None
@@ -191,7 +204,9 @@ impl FailurePatternDetector {
             pattern.description = "Detected volume surge in data".to_string();
             pattern.confidence = 0.7;
             pattern.severity = "MEDIUM".to_string();
-            pattern.evidence.push(format!("Max volume {:.1}x mean", max / mean));
+            pattern
+                .evidence
+                .push(format!("Max volume {:.1}x mean", max / mean));
             pattern.suggested_fix = "Consider adding volume-aware assertions".to_string();
             Some(pattern)
         } else {
@@ -213,7 +228,7 @@ impl FailurePatternDetector {
             for col in &snapshot.columns {
                 column_history
                     .entry(col.column_name.clone())
-                    .or_insert_with(Vec::new)
+                    .or_default()
                     .push(col.distinct_ratio);
             }
         }
@@ -225,11 +240,8 @@ impl FailurePatternDetector {
             }
 
             let mean = ratios.iter().sum::<f64>() / (ratios.len() as f64);
-            let variance = ratios
-                .iter()
-                .map(|r| (r - mean).powi(2))
-                .sum::<f64>()
-                / (ratios.len() as f64);
+            let variance =
+                ratios.iter().map(|r| (r - mean).powi(2)).sum::<f64>() / (ratios.len() as f64);
             let stddev = variance.sqrt();
 
             if stddev > 0.0 {

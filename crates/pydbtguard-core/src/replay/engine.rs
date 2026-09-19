@@ -15,7 +15,7 @@ impl HistoricalReplayEngine {
     }
 
     pub fn add_snapshot(&mut self, table_name: String, snapshot: ReplaySnapshot) {
-        self.snapshots.entry(table_name).or_insert_with(Vec::new).push(snapshot);
+        self.snapshots.entry(table_name).or_default().push(snapshot);
     }
 
     pub fn replay_test_historical(
@@ -29,11 +29,7 @@ impl HistoricalReplayEngine {
         for snapshot in snapshots {
             // Simulate test execution against historical snapshot
             // In production, this would execute the test SQL against a point-in-time snapshot
-            let result = self.simulate_test_execution(
-                test_name,
-                test_sql,
-                snapshot,
-            );
+            let result = self.simulate_test_execution(test_name, test_sql, snapshot);
             curve.add_result(result);
         }
 
@@ -53,7 +49,7 @@ impl HistoricalReplayEngine {
         //
         // For now, simulate based on snapshot metadata
         let passed = snapshot.row_count > 0 && !snapshot.schema_hash.is_empty();
-        let execution_time = (snapshot.bytes_used / 1024 / 1024) as u64 + 10; // Simulate: 10ms + 1ms per MB
+        let execution_time = (snapshot.bytes_used / 1024 / 1024) + 10; // Simulate: 10ms + 1ms per MB
 
         ReplayResult {
             test_name: test_name.to_string(),

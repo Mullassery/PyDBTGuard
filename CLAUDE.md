@@ -241,11 +241,25 @@ pytest                    # All tests
 
 ## CI/CD
 
-- GitHub Actions: `tests/`, `lint`, `build`
-- Pre-commit: Run tests before commit (if configured)
-- Release: Tag → build → PyPI
+- `.github/workflows/ci.yml` added 2026-09-19 (Python tests, Rust core
+  tests, cargo fmt/clippy, security audit). Not yet run on GitHub as of
+  that date — verify it's actually green before trusting this section or
+  adding a status badge to README.
+- `.github/dependabot.yml` added 2026-09-19 (pip, cargo, github-actions).
+- No pre-commit hooks configured.
+- No release automation exists — PyPI publish is not wired up, and the
+  package currently fails to build via maturin at all (see
+  ROADMAP_HONEST.md). Do not assume `pip install pydbtguard` works.
 
 ## Version Roadmap
+
+**Note (2026-09-19):** `pyproject.toml` and `Cargo.toml` both still say
+`0.1.0` despite the "Complete" markers below for v0.2.0/v0.3.0 — the version
+number was never bumped. Also, several features marked "Complete" below
+have real bugs or are non-functional stubs — see
+[ROADMAP_HONEST.md](ROADMAP_HONEST.md) before relying on this section
+(e.g. the historical replay engine returns fabricated data, and blast
+radius direction appears inverted).
 
 ### v0.1.0 (Complete)
 - Dbt manifest parsing

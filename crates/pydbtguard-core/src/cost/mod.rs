@@ -65,7 +65,10 @@ impl CostAnalysisResult {
         self.total_monthly_cost_usd += test.monthly_cost_usd;
         self.total_annual_cost_usd += test.annual_cost_usd;
 
-        *self.cost_by_test_type.entry(test.test_type.clone()).or_insert(0.0) += test.annual_cost_usd;
+        *self
+            .cost_by_test_type
+            .entry(test.test_type.clone())
+            .or_insert(0.0) += test.annual_cost_usd;
 
         self.most_expensive_tests.push(test);
         self.most_expensive_tests.sort_by(|a, b| {

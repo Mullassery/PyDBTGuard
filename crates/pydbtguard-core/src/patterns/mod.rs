@@ -20,8 +20,8 @@ pub enum PatternType {
 pub struct FailurePattern {
     pub pattern_type: PatternType,
     pub test_name: String,
-    pub confidence: f64,      // 0.0-1.0
-    pub severity: String,      // CRITICAL, HIGH, MEDIUM, LOW
+    pub confidence: f64,  // 0.0-1.0
+    pub severity: String, // CRITICAL, HIGH, MEDIUM, LOW
     pub description: String,
     pub evidence: Vec<String>,
     pub detected_at: String,

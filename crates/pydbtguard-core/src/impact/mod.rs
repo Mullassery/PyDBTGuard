@@ -95,7 +95,8 @@ impl BlastRadiusResult {
             .map(|m| m.impact_level.score() * (m.criticality_score / 100.0))
             .sum();
 
-        self.overall_blast_radius_score = (total_score / (self.affected_models.len() as f64)).min(100.0);
+        self.overall_blast_radius_score =
+            (total_score / (self.affected_models.len() as f64)).min(100.0);
 
         // Estimate recovery time: ~1 hour per 10 affected models, plus exposure risk
         self.estimated_recovery_time_hours = (self.affected_models.len() as f64 / 10.0)

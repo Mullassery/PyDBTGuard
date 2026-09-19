@@ -2,7 +2,9 @@
 
 ## System Design
 
-PyDBTGuard is a hybrid Rust + Python platform designed for predictive validation of dbt tests before deployment.
+PyDBTGuard is a hybrid Rust + Python platform designed for validation of dbt tests before deployment.
+
+**Current reality check (2026-09-19 audit — see [ROADMAP_HONEST.md](../ROADMAP_HONEST.md) for full detail):** the layered design below is the intended architecture, not the current wiring. Today, nothing under `pydbtguard/` (Python) imports the compiled Rust extension — the Rust core described here is built separately (when it builds at all; the maturin packaging is currently broken) but is not called from any analysis path. All scoring described below as "statistical"/"ML-based" is fixed-weight arithmetic in pure Python, not a trained model. No analysis command queries a live warehouse at runtime.
 
 ### High-Level Architecture
 
@@ -63,9 +65,10 @@ Heavy computational lifting:
 - Anomaly scoring (statistical outlier detection)
 
 #### `stats/predictor.rs`
-- Historical failure pattern analysis
-- ML-based failure probability estimation
-- Confidence scoring based on sample size
+- Not currently called from Python (see reality check above)
+- `FailurePredictor::predict` returns the input failure rate unchanged as
+  the "probability" — there is no model, just a passthrough plus a
+  confidence score derived from sample-count thresholds
 
 #### `lineage/graph.rs`
 - DAG construction from dbt manifest

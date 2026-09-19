@@ -29,7 +29,11 @@ impl BlastRadiusAnalyzer {
         result.total_affected_models = downstream
             .iter()
             .filter(|id| {
-                graph.nodes.get(*id).map(|n| n.node_type == NodeType::Model).unwrap_or(false)
+                graph
+                    .nodes
+                    .get(*id)
+                    .map(|n| n.node_type == NodeType::Model)
+                    .unwrap_or(false)
             })
             .count();
 
@@ -38,7 +42,8 @@ impl BlastRadiusAnalyzer {
             if let Some(node) = graph.nodes.get(node_id) {
                 if node.node_type == NodeType::Model {
                     let distance = self.calculate_distance(graph, source_model_id, node_id);
-                    let impact_level = self.determine_impact_level(distance, model_metadata, node_id);
+                    let impact_level =
+                        self.determine_impact_level(distance, model_metadata, node_id);
                     let criticality = self.calculate_criticality_score(model_metadata, node_id);
 
                     let affected_model = AffectedModel {
@@ -67,7 +72,11 @@ impl BlastRadiusAnalyzer {
         }
 
         // Calculate total estimated users
-        result.estimated_users_affected = result.affected_models.iter().map(|m| m.affected_users).sum();
+        result.estimated_users_affected = result
+            .affected_models
+            .iter()
+            .map(|m| m.affected_users)
+            .sum();
 
         // Generate recommendations
         self.generate_recommendations(&mut result);
@@ -170,9 +179,9 @@ impl BlastRadiusAnalyzer {
         metadata: &HashMap<String, HashMap<String, String>>,
         model_id: &str,
     ) -> Option<u32> {
-        metadata.get(model_id).and_then(|meta| {
-            meta.get("freshness_sla_hours").and_then(|s| s.parse().ok())
-        })
+        metadata
+            .get(model_id)
+            .and_then(|meta| meta.get("freshness_sla_hours").and_then(|s| s.parse().ok()))
     }
 
     fn count_bi_dependencies(&self, graph: &LineageGraph, model_id: &str) -> usize {
@@ -192,11 +201,12 @@ impl BlastRadiusAnalyzer {
     fn generate_recommendations(&self, result: &mut BlastRadiusResult) {
         if result.critical_impact_count > 0 {
             result.add_recommendation(
-                "Critical impact detected. Consider staging deployment with limited rollout.".to_string(),
+                "Critical impact detected. Consider staging deployment with limited rollout."
+                    .to_string(),
             );
         }
 
-        if result.exposures_at_risk.len() > 0 {
+        if !result.exposures_at_risk.is_empty() {
             result.add_recommendation(format!(
                 "Notify {} downstream stakeholders before deployment.",
                 result.exposures_at_risk.len()

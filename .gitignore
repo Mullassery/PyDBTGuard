@@ -1,6 +1,5 @@
 # Rust
 /target/
-Cargo.lock
 **/*.rs.bk
 *.pdb
 
@@ -27,7 +26,8 @@ share/python-wheels/
 *.egg-info/
 .installed.cfg
 *.egg
-MANIFEST
+/MANIFEST
+/MANIFEST.in
 .pytest_cache/
 .coverage
 .coverage.*

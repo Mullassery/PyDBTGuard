@@ -1,3 +1,3 @@
 pub mod graph;
 
-pub use graph::{LineageGraph, Node, Edge};
+pub use graph::{Edge, LineageGraph, Node};

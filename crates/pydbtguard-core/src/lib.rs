@@ -1,16 +1,16 @@
-pub mod stats;
+pub mod cost;
+pub mod impact;
 pub mod lineage;
 pub mod manifest;
-pub mod replay;
 pub mod patterns;
-pub mod impact;
-pub mod cost;
+pub mod replay;
+pub mod stats;
 
-pub use stats::{fingerprint, predictor};
-pub use replay::HistoricalReplayEngine;
-pub use patterns::FailurePatternDetector;
-pub use impact::BlastRadiusAnalyzer;
 pub use cost::CostCalculator;
+pub use impact::BlastRadiusAnalyzer;
+pub use patterns::FailurePatternDetector;
+pub use replay::HistoricalReplayEngine;
+pub use stats::{fingerprint, predictor};
 
 #[derive(Debug, Clone)]
 pub struct AnalysisResult {
