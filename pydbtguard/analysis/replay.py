@@ -10,7 +10,12 @@ from pydbtguard.warehouse.base import WarehouseConnector
 
 
 class HistoricalReplayAnalyzer:
-    """Analyzes test reliability over historical data."""
+    """Analyzes test reliability over historical data.
+
+    NOTE: Currently returns entirely simulated/synthetic data (see
+    `_simulate_replay`) — it does not query any real warehouse history.
+    See ROADMAP_HONEST.md.
+    """
 
     def __init__(self, warehouse: WarehouseConnector):
         self.warehouse = warehouse

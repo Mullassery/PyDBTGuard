@@ -1,7 +1,24 @@
+import re
 from typing import Dict, Any, List, Optional
 import snowflake.connector
 
 from .base import WarehouseConnector
+
+_SAFE_IDENTIFIER_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_$]*$")
+
+
+def _validate_identifier(value: str) -> str:
+    """Defense-in-depth check before interpolating an identifier into SQL.
+
+    `schema`/`table` are expected to come from the dbt manifest, not
+    end-user input, but this still guards against unexpected manifest
+    content (e.g. a name containing a quote) reaching a raw SQL string.
+    Not a substitute for real parameterization, which most SQL drivers
+    don't support for identifiers (only for values) anyway.
+    """
+    if not _SAFE_IDENTIFIER_RE.match(value):
+        raise ValueError(f"Unsafe warehouse identifier: {value!r}")
+    return value
 
 
 class SnowflakeConnector(WarehouseConnector):
@@ -47,6 +64,8 @@ class SnowflakeConnector(WarehouseConnector):
 
     def get_table_stats(self, schema: str, table: str) -> Dict[str, Any]:
         """Get table statistics"""
+        schema = _validate_identifier(schema)
+        table = _validate_identifier(table)
         query = f"""
         SELECT
             row_count,

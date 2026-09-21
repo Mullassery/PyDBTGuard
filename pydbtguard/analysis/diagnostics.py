@@ -70,10 +70,10 @@ class DiagnosticsAnalyzer:
                 causes.append("Recent data quality issue")
 
         # Check for common patterns
-        if "unique_id" in self._get_test_config(test_name):
+        if "unique" in test_name.lower():
             causes.append("Duplicate row detection failure")
 
-        if "freshness" in self._get_test_config(test_name):
+        if "freshness" in test_name.lower() or "freshness" in self._get_test_config(test_name):
             causes.append("Data freshness SLA breach")
 
         if "relationships" in test_name.lower():

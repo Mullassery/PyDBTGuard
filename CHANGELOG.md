@@ -8,6 +8,35 @@ this point forward are recorded.
 ## [Unreleased]
 
 ### Fixed
+- `pydbtguard/analysis/blast_radius.py::_get_downstream_models` (line ~67):
+  traversal walked the wrong graph direction — it followed `model_id`'s own
+  `depends_on.nodes` (its upstream sources) instead of finding nodes whose
+  `depends_on.nodes` list `model_id` (its actual downstream dependents).
+  Rewrote the traversal to scan for dependents and fixed
+  `_calculate_distance` (line ~138), which had the same inverted check.
+  Fixes `tests/test_phase2_analysis.py::TestBlastRadiusAnalyzer::test_impact_level_calculation`.
+  This also surfaced a latent bug in `_generate_recommendations` (line
+  ~269) — `m.get("sla_freshness_hours", 999)` doesn't protect against a
+  present key whose value is `None` (the dict-building code stores `None`
+  when no freshness SLA is configured), which previously never executed
+  because the traversal always returned an empty list. Fixed the
+  comparison to treat `None` as "no SLA" instead of comparing `None < 4`.
+- `pydbtguard/analysis/diagnostics.py::_identify_likely_causes` (line 73):
+  checked `"unique_id" in self._get_test_config(test_name)` — i.e. whether
+  the literal string `"unique_id"` was a dict key, which is never true for
+  a uniqueness test's config. Changed to `"unique" in test_name.lower()`,
+  matching the pattern already used for `relationships`/`not_null` two
+  lines below. Also fixed the sibling `freshness` branch (same class of
+  bug: it only checked a config key, never the test name) to check
+  `test_name.lower()` too, keeping the config check as a fallback. Fixes
+  `tests/test_phase3_analysis.py::TestDiagnosticsAnalyzer::test_identify_likely_causes`.
+- `pydbtguard/warehouse/snowflake.py::get_table_stats`: added
+  `_validate_identifier()` — rejects `schema`/`table` values that aren't
+  simple SQL identifiers before they're f-string-interpolated into the
+  stats query. Defense-in-depth only (values are manifest-derived, not
+  direct end-user input); not a substitute for real parameterization,
+  which doesn't apply to identifiers via most driver bind-parameter APIs
+  anyway.
 - `crates/pydbtguard-core/src/manifest/parser.rs`: added missing
   `#[derive(Debug)]` on `ManifestParser` — `cargo test -p pydbtguard-core`
   previously failed to compile because of this.
@@ -47,6 +76,10 @@ this point forward are recorded.
 - Moved `docs/PHASE2_v0.2.md` and `docs/PHASE3_v0.3.md` to `docs/archive/`
   with an index and accuracy disclaimer (see `docs/archive/README.md`).
 
+- `pydbtguard/analysis/replay.py::HistoricalReplayAnalyzer`: added a
+  docstring note disclosing that the class currently returns entirely
+  simulated data and does not query real warehouse history.
+
 ### Added
 - `ROADMAP_HONEST.md` — full built/not-built/broken status.
 - `CONTRIBUTING.md`, `SECURITY.md`, `CODE_OF_CONDUCT.md`.
@@ -72,9 +105,7 @@ this point forward are recorded.
 ### Known issues (see `ROADMAP_HONEST.md` for full detail)
 - Package cannot currently be installed via `pip install -e .` /
   `pip install pydbtguard` — maturin build fails.
-- `tests/test_phase2_analysis.py::TestBlastRadiusAnalyzer::test_impact_level_calculation`
-  and
-  `tests/test_phase3_analysis.py::TestDiagnosticsAnalyzer::test_identify_likely_causes`
-  currently fail. Not fixed in this pass — root causes documented in
-  `ROADMAP_HONEST.md`.
-- `pydbtguard replay` returns fabricated data, not real historical analysis.
+- `pydbtguard replay` returns fabricated data, not real historical analysis
+  (now disclosed in the class docstring).
+- All 21/21 Python tests pass as of this entry (previously 19/21 — the two
+  failures above are fixed, see `### Fixed`).

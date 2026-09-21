@@ -115,20 +115,24 @@ is **not** ML-based anywhere in the current code path.
   commits have not been pushed. No README badge has been added for CI,
   because there is no live workflow run to point it at yet; add one only
   after the workflow has actually run green on GitHub.
-- **2 of 21 Python tests currently fail:**
+- **FIXED (quick-fix pass, 2026-09-21): 2 of 21 Python tests were failing,
+  now 21/21 pass.**
   - `tests/test_phase2_analysis.py::TestBlastRadiusAnalyzer::test_impact_level_calculation`
-    — fails because blast-radius traversal appears to walk the wrong graph
-    direction (see README, "Blast radius direction looks inverted").
+    — was failing because blast-radius traversal walked the wrong graph
+    direction. Fixed in `pydbtguard/analysis/blast_radius.py::_get_downstream_models`
+    (now scans for nodes whose `depends_on.nodes` lists the source model,
+    instead of following the source model's own upstream deps) and
+    `_calculate_distance` (same inverted check). Also fixed a latent
+    `None < 4` crash in `_generate_recommendations` that this change
+    surfaced (see CHANGELOG).
   - `tests/test_phase3_analysis.py::TestDiagnosticsAnalyzer::test_identify_likely_causes`
     — `_identify_likely_causes` (`pydbtguard/analysis/diagnostics.py:73`)
-    checks `"unique_id" in self._get_test_config(test_name)`, i.e. whether
+    checked `"unique_id" in self._get_test_config(test_name)`, i.e. whether
     the literal string `"unique_id"` is a **key** in the test's config
-    dict — it almost never will be. The intent looks like it should check
-    whether the test name/type indicates a uniqueness test (e.g.
-    `"unique" in test_name.lower()`), matching the pattern used two lines
-    later for `relationships`/`not_null`. Not fixed in this pass — fixing
-    it changes behavior and should be done alongside re-checking the other
-    three branches in the same method for the same mistake.
+    dict — it almost never will be. Fixed to check
+    `"unique" in test_name.lower()`, matching the pattern used two lines
+    later for `relationships`/`not_null`. The sibling `freshness` branch
+    had the same class of bug and was fixed the same way.
 - **pytest collection warning**: `pydbtguard/analysis/optimization.py:9`
   defines `class TestOptimizer`, which pytest tries to collect as a test
   class (name starts with `Test`) and warns because it has an `__init__`.
@@ -160,10 +164,8 @@ is **not** ML-based anywhere in the current code path.
   command) instead of any real scanned-bytes figure — the dollar figures
   it prints are not meaningful for a real project, only internally
   consistent with each other.
-- **Blast radius mapping** — code runs and returns a result, but per Bucket
-  3, the direction looks inverted, so the result is likely wrong for most
-  real dbt graphs (would only accidentally look right for perfectly
-  symmetric star-schema data, if that's even encountered).
+- **Blast radius mapping** — FIXED (2026-09-21), see Bucket 3. Traversal
+  direction corrected; no longer returns empty/inverted results.
 - **Warehouse-aware anything** — no CLI command actually opens a warehouse
   connection. `--warehouse snowflake|bigquery` is accepted by `analyze` and
   silently unused inside `ReliabilityAnalyzer.analyze()`
@@ -195,11 +197,15 @@ is **not** ML-based anywhere in the current code path.
   still not doing anything real.
 - Blast-radius graph direction bug,
   `pydbtguard/analysis/blast_radius.py:67-121` (`_get_downstream_models`) —
-  needs a correctness fix plus a regression test that actually asserts the
-  right models are returned, not just that the field is populated.
-- `pydbtguard/analysis/diagnostics.py:73` heuristic bug (see Bucket 3) plus
-  an audit of the sibling branches (freshness, relationships, not_null) for
-  the same class of mistake.
+  FIXED 2026-09-21, see Bucket 3 / CHANGELOG. Still worth a follow-up: add a
+  regression test that asserts the *specific* right models are returned
+  (not just that the field is populated), and consider whether
+  `_calculate_distance` should compute real shortest-path distance instead
+  of a 1-vs-2 approximation.
+- `pydbtguard/analysis/diagnostics.py:73` heuristic bug — FIXED 2026-09-21
+  (`unique`/`freshness` branches both now check `test_name.lower()`, see
+  CHANGELOG). `relationships`/`not_null` branches already checked
+  `test_name.lower()` correctly and needed no change.
 - Rust modules with zero test coverage: `crates/pydbtguard-core/src/impact/`
   (218+128 LOC), `cost/` (111+108 LOC), `patterns/` (265+114 LOC),
   `replay/` (166+118 LOC) — roughly 700 LOC of untested Rust, none of it
@@ -225,9 +231,14 @@ is **not** ML-based anywhere in the current code path.
   time).
 - `crates/pydbtguard-core/src/replay/engine.rs:5` — `options` field on
   `HistoricalReplayEngine` is never read (dead-code warning at build time).
-- `pydbtguard/warehouse/snowflake.py` `get_table_stats` — parameterize the
-  query instead of f-string interpolation, even though current inputs are
-  manifest-derived rather than user-supplied.
+- `pydbtguard/warehouse/snowflake.py` `get_table_stats` — still builds SQL
+  via f-string interpolation of `schema`/`table`. Added
+  `_validate_identifier()` as defense-in-depth (2026-09-21): rejects any
+  value that isn't a simple identifier before interpolation, even though
+  current inputs are manifest-derived rather than user-supplied. Real
+  parameterization of identifiers (as opposed to values) isn't supported by
+  most driver bind-parameter APIs, so restructuring further than this was
+  judged out of scope for a quick fix.
 - Version drift: `pyproject.toml` / `Cargo.toml` both say `0.1.0` while
   `docs/archive/PHASE2_v0.2.md` and `PHASE3_v0.3.md` (moved to archive in
   this pass) describe v0.2.0/v0.3.0 as "Complete" in `CLAUDE.md`. Either the

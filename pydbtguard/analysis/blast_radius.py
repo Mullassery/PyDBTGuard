@@ -80,39 +80,40 @@ class BlastRadiusAnalyzer:
 
         affected = []
 
-        if model_id in visited or model_id not in self.nodes:
+        if model_id in visited:
             return affected
 
         visited.add(model_id)
 
-        # Find models that depend on this one (edges in manifest)
-        depends_on = []
-        if model_id in self.nodes:
-            node = self.nodes[model_id]
-            depends_on = node.get("depends_on", {}).get("nodes", [])
+        # Find models that depend ON this one (i.e. list model_id in their
+        # own depends_on.nodes) — that's what makes them downstream of it.
+        for dep_id, dep_node in self.nodes.items():
+            if dep_id in visited:
+                continue
+            if dep_node.get("resource_type") != "model":
+                continue
 
-        # Traverse to dependent models
-        for dep_id in depends_on:
-            if dep_id in self.nodes:
-                dep_node = self.nodes[dep_id]
-                if dep_node.get("resource_type") == "model":
-                    distance = self._calculate_distance(model_id, dep_id)
-                    impact_level = self._determine_impact_level(distance)
+            upstream = dep_node.get("depends_on", {}).get("nodes", [])
+            if model_id not in upstream:
+                continue
 
-                    affected.append({
-                        "model_id": dep_id,
-                        "model_name": dep_node.get("name", dep_id),
-                        "impact_level": impact_level,
-                        "distance": distance,
-                        "criticality_score": self._calculate_criticality(dep_node),
-                        "estimated_users": dep_node.get("config", {}).get("estimated_users", 0),
-                        "sla_freshness_hours": dep_node.get("config", {}).get("freshness", {}).get("warn_after", {}).get("count", None),
-                        "bi_dependencies": self._count_bi_dependencies(dep_id),
-                    })
+            distance = self._calculate_distance(model_id, dep_id)
+            impact_level = self._determine_impact_level(distance)
 
-                    # Recursively get downstream models
-                    downstream = self._get_downstream_models(dep_id, visited)
-                    affected.extend(downstream)
+            affected.append({
+                "model_id": dep_id,
+                "model_name": dep_node.get("name", dep_id),
+                "impact_level": impact_level,
+                "distance": distance,
+                "criticality_score": self._calculate_criticality(dep_node),
+                "estimated_users": dep_node.get("config", {}).get("estimated_users", 0),
+                "sla_freshness_hours": dep_node.get("config", {}).get("freshness", {}).get("warn_after", {}).get("count", None),
+                "bi_dependencies": self._count_bi_dependencies(dep_id),
+            })
+
+            # Recursively get downstream models
+            downstream = self._get_downstream_models(dep_id, visited)
+            affected.extend(downstream)
 
         return affected
 
@@ -136,9 +137,13 @@ class BlastRadiusAnalyzer:
         return at_risk
 
     def _calculate_distance(self, source: str, target: str) -> int:
-        """Calculate shortest path distance between nodes."""
-        # Simplified: assume all dependencies are distance 1
-        if target in self.nodes.get(source, {}).get("depends_on", {}).get("nodes", []):
+        """Calculate shortest path distance between nodes.
+
+        `target` is downstream of `source`, so `target` depends on `source`
+        (not the other way around) when they're directly connected.
+        """
+        # Simplified: assume direct dependency edges are distance 1
+        if source in self.nodes.get(target, {}).get("depends_on", {}).get("nodes", []):
             return 1
         return 2  # Default to 2 for transitive
 
@@ -261,7 +266,10 @@ class BlastRadiusAnalyzer:
                 f"Large blast radius ({len(affected_models)} models). Prepare comprehensive rollback plan."
             )
 
-        if any(m.get("sla_freshness_hours", 999) < 4 for m in affected_models):
+        if any(
+            m.get("sla_freshness_hours") is not None and m["sla_freshness_hours"] < 4
+            for m in affected_models
+        ):
             recommendations.append(
                 "High-SLA models affected. Prioritize incident response."
             )
