@@ -61,7 +61,7 @@ impl FailurePredictor {
 }
 
 #[pymodule]
-fn pydbtguard(py: Python, m: &PyModule) -> PyResult<()> {
+fn _core(py: Python, m: &PyModule) -> PyResult<()> {
     m.add_class::<ColumnFingerprint>()?;
     m.add_class::<FailurePredictor>()?;
     Ok(())

@@ -60,6 +60,40 @@ is **not** ML-based anywhere in the current code path.
 
 ## Bucket 3: CI errors / broken
 
+- **FIXED (2026-09-27, real-world benchmarking pass against `dbt-labs/jaffle-shop-classic`
+  via dbt-duckdb):** packaging now actually works. Added `manifest-path =
+  "bindings/python/Cargo.toml"` to `pyproject.toml`'s `[tool.maturin]`, and renamed
+  `bindings/python/src/lib.rs`'s `#[pymodule] fn pydbtguard(...)` to `fn _core(...)` so it
+  matches the declared `module-name = "pydbtguard._core"` (previously mismatched, so even
+  after the manifest-path fix, `maturin` produced a wheel Python could not import — verified
+  both problems for real, one at a time). `pip install -e .` now succeeds, `from
+  pydbtguard._core import ColumnFingerprint, FailurePredictor` now actually imports, and
+  `pydbtguard analyze .` runs end-to-end against a real dbt project. The second concern
+  raised below (nothing under `pydbtguard/` imports the compiled extension) is **still true**
+  — fixing the build makes it importable, not integrated; see the new item below.
+- **FIXED (2026-09-27), same pass — two more real bugs found while getting `analyze` to
+  produce meaningful output on a real project:**
+  1. `ManifestLoader._infer_test_type` (`pydbtguard/dbt/manifest.py`) checked for an
+     `attached_to` key and a `raw_sql` key — neither exists on any real dbt manifest test
+     node (checked against a live `manifest.json` from a real `dbt build`); `raw_sql` was
+     renamed to `raw_code`/`compiled_code` in dbt core years ago, and `attached_to` was never
+     a real field. Both checks were always false, so **every real test's type came back
+     "unknown"** regardless of whether it was `unique`/`not_null`/`accepted_values`/
+     `relationships`/singular. Fixed to read the real `test_metadata.name` field (present on
+     every real generic test) and fall back to `raw_code`/`compiled_code` for singular tests.
+  2. `ReliabilityAnalyzer._compute_reliability_score` (`pydbtguard/analysis/reliability.py`)
+     checked `test.get("test_type") == "generic"` for a +10 score bonus — but
+     `_infer_test_type` never returns the literal string `"generic"` (it returns the specific
+     type name). This meant the +10 bonus **could never fire, for any test, on any real
+     project** — the max reachable score was 75, one point under the `STABLE` threshold of
+     80, so **`analyze` could never classify a single test as STABLE, ever**, independent of
+     bug #1 above (confirmed: the "unknown"-type bug alone did not explain 0/20 STABLE on a
+     real, 100%-passing project — this second bug did). Fixed to check membership in the real
+     generic-test-type set (`unique`/`not_null`/`accepted_values`/`relationships`). Verified
+     on `jaffle-shop-classic`: 20/20 real tests now correctly differentiate by type (`unique`
+     → 80/STABLE, `not_null`/`accepted_values` → 85/STABLE, `relationships` → 82/STABLE)
+     instead of all 20 landing at AT_RISK with type "unknown". Regression tests added:
+     `tests/test_manifest_test_type.py`, `tests/test_reliability_scoring.py`.
 - **Packaging is broken.** `pip install -e ".[dev]"` fails immediately:
   ```
   💥 maturin failed
@@ -179,7 +213,14 @@ is **not** ML-based anywhere in the current code path.
   (`crates/pydbtguard-core/src/stats/predictor.rs:53`,
   `let failure_probability = pattern.failure_rate;`) with a confidence
   score based only on sample-count thresholds. No training, no model
-  weights, no statistics beyond a ratio.
+  weights, no statistics beyond a ratio. **Still true after the 2026-09-27
+  packaging fix** (see Bucket 3): the compiled `pydbtguard._core` extension
+  is now genuinely importable, but grepped again post-fix and confirmed
+  zero references anywhere under `pydbtguard/` — fixing the build made the
+  Rust `FailurePredictor`/`ColumnFingerprint` importable, not integrated
+  into `analyze` or any other real code path. `AnalysisReport`'s
+  `failure_probability` field is declared in `pydbtguard/models/schemas.py`
+  but never assigned anywhere in the codebase.
 - **`docs/GETTING_STARTED.md`, `docs/API.md`, `docs/ROADMAP.md`,
   `docs/INSTALLATION.md`** — referenced by the pre-audit README's
   Documentation section. None of these files exist. Removed the dead links

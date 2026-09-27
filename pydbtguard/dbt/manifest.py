@@ -60,13 +60,22 @@ class ManifestLoader:
 
     @staticmethod
     def _infer_test_type(node: Dict[str, Any]) -> str:
-        """Infer test type from node metadata"""
-        attached_to = node.get("attached_to")
-        if attached_to:
-            return "generic"
+        """Infer test type from node metadata.
 
-        raw_sql = node.get("raw_sql", "")
-        if raw_sql:
+        Real dbt manifest.json test nodes (checked against a live dbt build)
+        never have an `attached_to` key, and `raw_sql` was renamed to
+        `raw_code`/`compiled_code` in dbt core years ago - both checks below
+        were always false on any current manifest, so every real test fell
+        through to "unknown" regardless of type. Generic tests carry a real
+        `test_metadata.name` field (e.g. "unique", "not_null",
+        "accepted_values", "relationships"); singular tests have no
+        `test_metadata` but do have `raw_code`/`compiled_code`.
+        """
+        test_metadata = node.get("test_metadata")
+        if test_metadata and test_metadata.get("name"):
+            return test_metadata["name"]
+
+        if node.get("raw_code") or node.get("compiled_code"):
             return "singular"
 
         return "unknown"

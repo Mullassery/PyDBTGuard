@@ -41,5 +41,6 @@ pydbtguard = "pydbtguard.cli:main"
 
 [tool.maturin]
 module-name = "pydbtguard._core"
+manifest-path = "bindings/python/Cargo.toml"
 features = ["pyo3/extension-module"]
 include = ["LICENSE"]

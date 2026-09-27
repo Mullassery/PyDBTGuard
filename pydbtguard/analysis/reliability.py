@@ -53,12 +53,21 @@ class ReliabilityAnalyzer:
             "recommendations": self._get_recommendations(test, score),
         }
 
+    # dbt's built-in schema ("generic") test types, as returned by
+    # ManifestLoader._infer_test_type on a real manifest -- that function
+    # never returns the literal string "generic", so checking against it
+    # directly (as this scoring used to) meant the +10 bonus below could
+    # never fire for any test, on any real project: max reachable score was
+    # 75, one point under the STABLE threshold, so nothing could ever be
+    # classified STABLE regardless of real data.
+    GENERIC_TEST_TYPES = {"unique", "not_null", "accepted_values", "relationships"}
+
     @staticmethod
     def _compute_reliability_score(test: Dict[str, Any]) -> int:
         """Compute reliability score (0-100)"""
         score = 75
 
-        if test.get("test_type") == "generic":
+        if test.get("test_type") in ReliabilityAnalyzer.GENERIC_TEST_TYPES:
             score += 10
 
         if "unique" in test.get("name", "").lower():

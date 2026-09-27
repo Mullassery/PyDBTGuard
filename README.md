@@ -46,7 +46,7 @@ plus/minus fixed penalties keyed on substrings like `"unique"` in a test
 name) — see `pydbtguard/analysis/reliability.py`. There is no trained model,
 no historical training data, and no statistical inference.
 
-## Use Cases (once the packaging bug below is fixed)
+## Use Cases
 
 ```bash
 # Score every test in a dbt project from its manifest
@@ -62,46 +62,38 @@ manifest — not from any observed pass/fail history.
 
 ## Installation
 
-**Currently broken.** `pip install -e ".[dev]"` fails immediately with:
-
-```
-💥 maturin failed
-Caused by: Failed to parse Cargo.toml at .../Cargo.toml
-Caused by: TOML parse error at line 1, column 1
-missing field `package`
-```
-
-Root cause: `pyproject.toml` uses the `maturin` build backend with no
-`manifest-path` set, so maturin looks for `Cargo.toml` next to
-`pyproject.toml` — but that file is a Cargo **workspace** manifest (no
-`[package]` section); the actual Python-extension crate is at
-`bindings/python/Cargo.toml`. This has not been verified to work via `pip
-install pydbtguard` or `pip install -e .` in this pass — see
-[ROADMAP_HONEST.md](ROADMAP_HONEST.md) for the full breakdown and what a fix
-needs to also address (module-name mismatch, unused Rust core).
-
-To run the Python CLI logic without building the Rust extension (nothing in
-the `pydbtguard` package currently imports the compiled extension, so this
-works):
+**FIXED (2026-09-27).** `pip install -e .` now actually works — verified
+end-to-end on this pass, including a real `pydbtguard analyze .` run
+against a real dbt project. Two real bugs were blocking this:
+`pyproject.toml`'s `[tool.maturin]` had no `manifest-path`, so maturin
+looked for `Cargo.toml` next to `pyproject.toml` — a Cargo **workspace**
+manifest with no `[package]` section, not the actual buildable crate
+(`bindings/python/Cargo.toml`). Fixing that alone still produced a wheel
+Python couldn't import, because `bindings/python/src/lib.rs`'s
+`#[pymodule] fn pydbtguard(...)` didn't match the declared `module-name =
+"pydbtguard._core"`. Both fixed; see
+[ROADMAP_HONEST.md](ROADMAP_HONEST.md) for the full detail, including what
+this fix does *not* address (the Rust core still isn't called from
+anywhere in the Python analysis code).
 
 ```bash
 git clone https://github.com/Mullassery/PyDBTGuard
 cd PyDBTGuard
-python3.10 -m venv .venv && source .venv/bin/activate
-pip install click pydantic pyyaml sqlglot networkx pandas pyarrow tqdm tomli \
-            snowflake-connector-python google-cloud-bigquery
-PYTHONPATH=. python -m pydbtguard.cli analyze /path/to/dbt/project
+python3.11 -m venv .venv && source .venv/bin/activate
+pip install -e .
+pydbtguard analyze /path/to/dbt/project
 ```
-
-This is how the CLI was actually exercised for this audit — it was not
-installed as a package.
 
 ## What's working now (verified by me, this pass)
 
 - **`pydbtguard analyze .`** — loads `target/manifest.json`, extracts
-  tests/models, computes a heuristic 0-100 score per test. Verified by
-  running it directly against a sample manifest via `PYTHONPATH=.`
-  (see Installation above); not tested against a real dbt project's manifest.
+  tests/models, computes a heuristic 0-100 score per test. **Verified
+  2026-09-27 against a real dbt project**
+  ([`dbt-labs/jaffle-shop-classic`](https://github.com/dbt-labs/jaffle-shop-classic)
+  built for real with `dbt-duckdb`) — see "vs elementary-data" below. Two
+  real bugs found and fixed in the process (test-type misclassification,
+  and a scoring bug that made `STABLE` unreachable for any test on any
+  project) — see ROADMAP_HONEST.md.
 - **`pydbtguard coverage-audit`** — real logic in
   `pydbtguard/analysis/coverage.py`, walks manifest nodes and flags missing
   test types per model, prioritized. 10/10 of its unit tests pass.
@@ -168,6 +160,31 @@ installed as a package.
 
 Full bug list, technical debt, and what's simply not built at all:
 [ROADMAP_HONEST.md](ROADMAP_HONEST.md).
+
+## vs elementary-data
+
+`elementary-data` is the leading OSS dbt observability tool and the
+closest real comparison — but it solves a different problem than
+`pydbtguard analyze` does. Tested both against the same real dbt project,
+[`dbt-labs/jaffle-shop-classic`](https://github.com/dbt-labs/jaffle-shop-classic),
+built for real with `dbt-duckdb` (28 real seeds/models/tests, 20 real data
+tests, 0 failures).
+
+| | `pydbtguard analyze` | `elementary-data` |
+|---|---|---|
+| Method | Static: reads `manifest.json` alone, no execution history needed | Requires its own dbt package installed and run — captures real per-test-run results (`elementary_test_results` table) as a durable historical record |
+| Runtime | <1s | ~4s added to the real `dbt build` (elementary's own on-run-end hooks) |
+| What it told us about this real, 100%-passing project | Type-differentiated static risk: `unique`→80/STABLE, `not_null`/`accepted_values`→85/STABLE, `relationships`→82/STABLE, for all 20 real tests | Real execution record: all 20 real tests logged `status='pass'`, `test_type='dbt_test'` — the actual ground truth pydbtguard's static score is trying to approximate without ever running anything |
+| Value on a *first* run (no history yet) | Full — doesn't need history | Limited — its real value (anomaly detection, freshness/volume monitoring, reliability trends) compounds as more real runs accumulate; on run #1 it mostly logged what dbt itself already reported |
+
+**Bottom line:** `pydbtguard analyze` gives you an instant, no-history-needed
+risk signal purely from what a test *declares itself to be* (useful before
+you've ever run the project for real, or as a pre-deployment gate);
+`elementary-data` gives you a real, growing historical record of what
+actually happened, plus real data-quality monitoring (freshness, volume,
+schema drift) that a static manifest read can't see at all. They're
+complementary, not substitutes — and until this pass, `pydbtguard analyze`
+couldn't be run against a real project at all (see "Installation" above).
 
 ## Documentation
 
