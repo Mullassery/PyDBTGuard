@@ -4,14 +4,16 @@ Analyzes a dbt project's `manifest.json` to flag which tests look risky, map
 which downstream models a failing test would affect, and estimate test
 execution cost — all from static dbt metadata.
 
+[![CI](https://github.com/Mullassery/PyDBTGuard/actions/workflows/ci.yml/badge.svg)](https://github.com/Mullassery/PyDBTGuard/actions/workflows/ci.yml)
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-blue)](https://www.python.org)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](./LICENSE)
 
-**Status: early / experimental.** Packaging is currently broken (see below),
-one of the headline features (historical replay) returns fabricated data,
-and the blast-radius direction is inverted. Do not use this for anything
-that matters yet. Read "What's built but not verified / not working" before
-you install it.
+**Status: early / experimental.** Packaging now works and the full test
+suite passes (30/30), but one of the headline features (historical replay
+via `pydbtguard replay`) still returns entirely fabricated data, `optimize`/
+`pr-check` are stubs, and no analysis command actually queries a real
+warehouse yet. Read "What's built but not verified / not working" before
+you rely on this for anything that matters.
 
 ---
 
@@ -104,17 +106,19 @@ pydbtguard analyze /path/to/dbt/project
   test types per model, prioritized. 10/10 of its unit tests pass.
 - **`pydbtguard diagnose --test <name>`** — real logic in
   `pydbtguard/analysis/diagnostics.py`; produces plausible-looking diagnostic
-  SQL templates from name/config pattern matching. 2/3 of its unit tests
-  pass — one is currently failing (see below).
+  SQL templates from name/config pattern matching. 3/3 of its unit tests
+  pass (fixed 2026-09-21, re-verified 2026-09-29).
 - **`pydbtguard cost`** — real arithmetic in `pydbtguard/analysis/cost.py`
   over test metadata; all its unit tests pass. Note the CLI feeds it a
   hard-coded `estimated_bytes_scanned: 1_000_000_000` for every single test
   (`pydbtguard/cli.py`, `cost` command) rather than any real scanned-bytes
   figure, so the dollar amounts are not meaningful yet.
-- **Rust core unit tests**: `cargo test -p pydbtguard-core` — 4/4 pass
-  (fixed one broken test as part of this pass, see CHANGELOG).
-- **Python test suite**: `PYTHONPATH=. pytest tests/` — 19/21 pass, 2 fail
-  (see "Not working" below). Run against Python 3.11 (the repo declares
+- **Rust core unit tests**: `cargo test -p pydbtguard-core` — 4/4 pass.
+- **Python test suite**: `pytest tests/` — **30/30 pass** (re-verified
+  2026-09-29). This includes the diagnostics and blast-radius tests that
+  were failing as of an earlier pass — both were fixed on 2026-09-21 (see
+  "Blast radius" below and CHANGELOG) but this section hadn't been updated
+  to reflect it until now. Run against Python 3.11 (the repo declares
   `requires-python = ">=3.10"`; the machine's default `python3` was 3.9).
 
 ## What's built but not verified / not working
@@ -129,15 +133,13 @@ pydbtguard analyze /path/to/dbt/project
   command (`pydbtguard/cli.py`, `replay`) doesn't even call this class; it
   just does date-string math and prints "Results would show: ...". This
   feature does not work.
-- **Blast radius direction looks inverted.** `_get_downstream_models`
-  (`pydbtguard/analysis/blast_radius.py:67-110`) walks
-  `node["depends_on"]["nodes"]` — a dbt node's *upstream* dependencies — and
-  labels the result "affected"/downstream models. In dbt, `depends_on.nodes`
-  points at ancestors, not descendants, so this appears to walk the wrong
-  direction. This is consistent with a real, currently-failing test:
-  `tests/test_phase2_analysis.py::TestBlastRadiusAnalyzer::test_impact_level_calculation`.
-  Not fixed in this pass — needs a dedicated look at graph direction and the
-  fixture semantics.
+- **FIXED (2026-09-21): blast radius direction was inverted.**
+  `_get_downstream_models` (`pydbtguard/analysis/blast_radius.py`) used to
+  walk `node["depends_on"]["nodes"]` — a dbt node's *upstream* dependencies —
+  and label the result "affected"/downstream models, the wrong direction.
+  Corrected to scan for nodes whose `depends_on.nodes` includes the target
+  model (its real dependents). `TestBlastRadiusAnalyzer::test_impact_level_calculation`
+  now passes.
 - **`pydbtguard optimize` and `pydbtguard pr-check` (top-level CLI
   commands) are stubs** — each is a single `click.echo(...)` line
   (`pydbtguard/cli.py`) and does nothing. Confusingly, a real, more complete

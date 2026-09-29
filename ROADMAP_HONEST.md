@@ -1,7 +1,11 @@
 # ROADMAP_HONEST
 
-Honest status of PyDBTGuard as of 2026-09-19. No hedge words. If something is
-broken or fake, it's stated as broken or fake, not "planned" or "in progress."
+Honest status of PyDBTGuard, originally written 2026-09-19 and re-verified
+against current code/CI/tests multiple times since (most recently
+2026-09-29 — see dated `FIXED (...)`/re-verification notes threaded
+throughout for what changed and when). No hedge words. If something is
+broken or fake, it's stated as broken or fake, not "planned" or "in
+progress."
 
 This repo is a hybrid Rust + Python monorepo (`crates/pydbtguard-core` +
 `bindings/python` + `pydbtguard/`). It reads a dbt project's static
@@ -94,37 +98,17 @@ is **not** ML-based anywhere in the current code path.
      → 80/STABLE, `not_null`/`accepted_values` → 85/STABLE, `relationships` → 82/STABLE)
      instead of all 20 landing at AT_RISK with type "unknown". Regression tests added:
      `tests/test_manifest_test_type.py`, `tests/test_reliability_scoring.py`.
-- **Packaging is broken.** `pip install -e ".[dev]"` fails immediately:
-  ```
-  💥 maturin failed
-  Caused by: Failed to parse Cargo.toml at /.../Cargo.toml
-  Caused by: TOML parse error at line 1, column 1
-  missing field `package`
-  ```
-  `pyproject.toml`'s `[tool.maturin]` has no `manifest-path`, so maturin
-  looks for `Cargo.toml` beside `pyproject.toml` — the workspace root
-  manifest, which has no `[package]` table. The actual buildable crate is
-  `bindings/python/Cargo.toml`. **This needs a dedicated session** — beyond
-  adding `manifest-path = "bindings/python/Cargo.toml"`, two more things
-  need resolving together or the build will still be broken/misleading:
-  1. `pyproject.toml` sets `module-name = "pydbtguard._core"`, but
-     `bindings/python/src/lib.rs:64` declares `#[pymodule] fn pydbtguard(...)`
-     — the Rust module function is named `pydbtguard`, not `_core`. These
-     need to agree, and `pydbtguard` (the extension name) would then
-     collide with the top-level pure-Python package of the same name unless
-     deliberately renamed/namespaced.
-  2. Nothing under `pydbtguard/` imports the compiled extension once it
-     does build (grepped, zero references), so fixing the build alone
-     doesn't make the "hybrid Rust+Python" architecture real — the Python
-     analysis code would need to actually call into it.
-- **`cargo build` / `cargo test` at the workspace root fail** with a linker
-  error (`ld: symbol(s) not found for architecture arm64`, missing
-  `_PyObject_GetItem` etc.) because `bindings/python` is a PyO3
-  `extension-module` cdylib, which cargo cannot link directly on macOS —
-  it must be built through `maturin`. This is expected PyO3 behavior, not a
-  new bug, but it means `cargo test` (no `-p` flag) cannot be used as a
-  smoke test for this repo; use `cargo test -p pydbtguard-core` instead. Not
-  documented anywhere in the repo before this pass.
+- **`cargo test` at the workspace root**: re-verified 2026-09-29, this
+  currently succeeds (`cargo test`, no `-p` flag → 4/4 pass, all from
+  `pydbtguard-core`; `bindings/python` has no `#[cfg(test)]` code of its own,
+  so there's nothing for cargo to build a test harness for there, and the
+  PyO3 `extension-module` cdylib is never asked to produce a standalone
+  linked test binary). The `_PyObject_GetItem`-style linker error this
+  bullet used to describe would only occur if `bindings/python` gained real
+  test code without also feature-gating `extension-module` behind a
+  non-default feature (the pattern used elsewhere in this author's other
+  Rust+PyO3 repos, e.g. PyTerrainMap/PyRoboReplay) — worth doing proactively
+  before adding tests there, not an active bug today.
 - **`crates/pydbtguard-core/src/manifest/parser.rs` and `mod.rs` were
   untracked in git** until this pass, due to a `.gitignore` bug: a bare
   `MANIFEST` pattern (line 30, meant to ignore Python's sdist `MANIFEST`
@@ -140,15 +124,15 @@ is **not** ML-based anywhere in the current code path.
   distributable extension module should commit its lockfile for
   reproducible builds; this is a recurring pattern flagged across this
   author's other Rust repos.
-- **No CI existed at all before this pass**, despite `CLAUDE.md` claiming
+- **No CI existed prior to 2026-09-19**, despite `CLAUDE.md` claiming
   "GitHub Actions: `tests/`, `lint`, `build`" under its CI/CD section — that
-  claim was false. Added `.github/workflows/ci.yml` in this pass (Python
-  tests on 3.10/3.11/3.12, Rust `cargo test -p pydbtguard-core`, cargo
-  fmt/clippy checks) and `.github/dependabot.yml` (pip, cargo,
-  github-actions ecosystems). **Neither has run on GitHub yet** — these
-  commits have not been pushed. No README badge has been added for CI,
-  because there is no live workflow run to point it at yet; add one only
-  after the workflow has actually run green on GitHub.
+  claim was false at the time. `.github/workflows/ci.yml` (Python tests on
+  3.10/3.11/3.12, Rust `cargo test -p pydbtguard-core`, cargo fmt/clippy
+  checks) and `.github/dependabot.yml` were added and have since actually
+  run on GitHub — re-verified 2026-09-29 via `gh run list`: the CI workflow
+  is green on every push to `main` going back to at least 2026-09-21,
+  including the most recent commit. No README CI badge has been added yet;
+  safe to add one now.
 - **FIXED (quick-fix pass, 2026-09-21): 2 of 21 Python tests were failing,
   now 21/21 pass.**
   - `tests/test_phase2_analysis.py::TestBlastRadiusAnalyzer::test_impact_level_calculation`
@@ -264,11 +248,15 @@ is **not** ML-based anywhere in the current code path.
 
 ## Technical debt (concrete, file:line)
 
-**Warrants a dedicated follow-up session:**
+**Resolved, no longer warrants a follow-up session:**
 - Packaging/build chain (`pyproject.toml` maturin config + module name
-  mismatch + disconnected Rust core) — three interacting issues, see Bucket
-  3. Fixing one without the others produces a build that "works" but is
-  still not doing anything real.
+  mismatch + disconnected Rust core) — all three of the originally
+  interacting issues are now fixed: the maturin config (2026-09-27), the
+  module-name mismatch (2026-09-27), and the Rust core being disconnected
+  from `analyze` (2026-09-29, see Bucket 4). `ColumnFingerprint` is still
+  unused anywhere under `pydbtguard/` — a smaller, separate follow-up.
+
+**Still warrants a dedicated follow-up session:**
 - Blast-radius graph direction bug,
   `pydbtguard/analysis/blast_radius.py:67-121` (`_get_downstream_models`) —
   FIXED 2026-09-21, see Bucket 3 / CHANGELOG. Still worth a follow-up: add a
@@ -350,7 +338,5 @@ is **not** ML-based anywhere in the current code path.
   uses `>=` everywhere); no lockfile exists for the Python side (`Cargo.lock`
   now committed for the Rust side as of this pass, but there is no
   `requirements-lock` / `uv.lock` / `poetry.lock` equivalent for Python).
-  `cargo audit` and a Python dependency audit were not run to completion as
-  part of a CI job before this pass — a `security-audit` job was added to
-  `.github/workflows/ci.yml` in this pass (see CHANGELOG) but, per the CI
-  note above, has not yet run on GitHub.
+  A `security-audit` job runs as part of `.github/workflows/ci.yml` and is
+  green on GitHub as of 2026-09-29 (re-verified via `gh run list`).
