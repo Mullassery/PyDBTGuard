@@ -41,10 +41,15 @@ today comes from parsing the manifest JSON, not from live table stats, query
 history, or execution logs.
 
 **No machine learning.** Despite "predictive"/"ML-based" language in earlier
-drafts of this README, the scoring is fixed-weight arithmetic (a base score
-plus/minus fixed penalties keyed on substrings like `"unique"` in a test
-name) — see `pydbtguard/analysis/reliability.py`. There is no trained model,
-no historical training data, and no statistical inference.
+drafts of this README, the reliability *score* is fixed-weight arithmetic (a
+base score plus/minus fixed penalties keyed on substrings like `"unique"` in
+a test name) — see `pydbtguard/analysis/reliability.py`. There is no trained
+model, no statistical inference beyond a ratio. `analyze` now also reports a
+real `failure_probability` per test, computed from real accumulated
+historical `dbt test` run outcomes (`pydbtguard/analysis/run_history.py`,
+reading dbt's own `target/run_results.json` across repeated runs) via the
+compiled Rust `FailurePredictor` — genuinely wired to real data as of
+2026-09-29, but it's still "historical failure rate," not a trained model.
 
 ## Use Cases
 
@@ -145,12 +150,14 @@ pydbtguard analyze /path/to/dbt/project
   parameterized: `SnowflakeConnector.get_table_stats`
   (`pydbtguard/warehouse/snowflake.py`) builds SQL via an f-string
   interpolating `schema`/`table` directly.
-- **The Rust core is architecturally disconnected from the Python CLI.**
-  `bindings/python/src/lib.rs` exposes `ColumnFingerprint` and
-  `FailurePredictor` via PyO3, but nothing under `pydbtguard/` imports the
-  compiled extension (`pydbtguard._core`) — confirmed by grep, zero
-  references. All current analysis is pure Python. The "hybrid Rust+Python"
-  architecture described in `docs/ARCHITECTURE.md` is not wired up yet.
+- **FIXED (2026-09-29): the Rust core is now wired into the Python CLI, for
+  failure prediction.** `pydbtguard/analysis/reliability.py` now imports
+  `pydbtguard._core` and calls the real `FailurePredictor` with real
+  accumulated `dbt test` run history (see `run_history.py`) — `analyze`'s
+  output includes a real `failure_probability` per test. `ColumnFingerprint`
+  is still unused anywhere under `pydbtguard/` — the "hybrid Rust+Python"
+  architecture described in `docs/ARCHITECTURE.md` is now partially, not
+  fully, wired up.
 - **Package has never actually been built/published successfully as far as
   this pass could verify** — see Installation above. The `pyproject.toml`
   and `Cargo.toml` both report version `0.1.0` even though

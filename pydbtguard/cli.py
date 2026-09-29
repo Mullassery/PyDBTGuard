@@ -40,7 +40,7 @@ def analyze(project_path: str, warehouse: Optional[str], output: Optional[str], 
             click.echo(f"✓ Loaded manifest with {len(manifest.get('nodes', {}))} nodes")
 
         analyzer = ReliabilityAnalyzer()
-        report = analyzer.analyze(manifest, warehouse_type=warehouse)
+        report = analyzer.analyze(manifest, project_path=project_path, warehouse_type=warehouse)
 
         if verbose:
             click.echo(f"✓ Analysis complete: {len(report['tests'])} tests analyzed")

@@ -8,6 +8,27 @@ this point forward are recorded.
 ## [Unreleased]
 
 ### Fixed
+- **The compiled Rust `FailurePredictor` was importable (since the
+  2026-09-27 packaging fix) but never actually called from anywhere under
+  `pydbtguard/`** — and even if it had been, there was no real historical
+  failure data anywhere in this codebase to call it with
+  (`HistoricalReplayAnalyzer` fabricates entirely synthetic data; see
+  below). Added `pydbtguard/analysis/run_history.py`: reads dbt's own real
+  `target/run_results.json` (written after every real `dbt test`/`dbt
+  build`) and appends each real run's per-test pass/fail outcomes to a
+  local, persistent, genuinely-accumulating history file. `analyze` now
+  calls the real `FailurePredictor.predict_py()` with each test's real
+  accumulated history, so `failure_probability`/`prediction_confidence`/
+  `likely_causes` in the CLI's JSON output are real, not absent or
+  fabricated (honestly `None` with an explanatory note when no history has
+  been recorded for a test yet, e.g. on a fresh project). Verified with 4
+  new tests (`tests/test_real_failure_prediction.py`) against real
+  dbt-artifact-shaped `run_results.json` fixtures across several simulated
+  runs, plus a real CLI invocation across two real runs confirming
+  accumulation end-to-end. `pydbtguard replay`'s
+  `HistoricalReplayAnalyzer`/`_simulate_replay` (warehouse point-in-time
+  snapshot replay) remains separately, explicitly still fake — not touched
+  in this pass. See `ROADMAP_HONEST.md` for full detail.
 - `pydbtguard/analysis/blast_radius.py::_get_downstream_models` (line ~67):
   traversal walked the wrong graph direction — it followed `model_id`'s own
   `depends_on.nodes` (its upstream sources) instead of finding nodes whose

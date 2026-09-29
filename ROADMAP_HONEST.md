@@ -206,21 +206,54 @@ is **not** ML-based anywhere in the current code path.
   (`pydbtguard/analysis/reliability.py` — `warehouse_type` parameter is
   never referenced in the method body).
 - **"ML-based failure prediction"** (as described in the pre-audit README
-  and `docs/ARCHITECTURE.md`) — does not exist. Both the Python
-  (`reliability.py`) and Rust (`stats/predictor.rs`) implementations are
-  fixed arithmetic over static inputs; `FailurePredictor::predict` in Rust
-  literally returns the input failure rate as-is
-  (`crates/pydbtguard-core/src/stats/predictor.rs:53`,
-  `let failure_probability = pattern.failure_rate;`) with a confidence
-  score based only on sample-count thresholds. No training, no model
-  weights, no statistics beyond a ratio. **Still true after the 2026-09-27
-  packaging fix** (see Bucket 3): the compiled `pydbtguard._core` extension
-  is now genuinely importable, but grepped again post-fix and confirmed
-  zero references anywhere under `pydbtguard/` — fixing the build made the
-  Rust `FailurePredictor`/`ColumnFingerprint` importable, not integrated
-  into `analyze` or any other real code path. `AnalysisReport`'s
-  `failure_probability` field is declared in `pydbtguard/models/schemas.py`
-  but never assigned anywhere in the codebase.
+  and `docs/ARCHITECTURE.md`) — still does not exist, and isn't claimed to.
+  `FailurePredictor::predict` in Rust is genuinely fixed arithmetic over its
+  input failure rate (`crates/pydbtguard-core/src/stats/predictor.rs:53`,
+  `let failure_probability = pattern.failure_rate;`) with confidence based
+  only on sample-count thresholds — no training, no model weights, no
+  statistics beyond a ratio. That part is unchanged and not being
+  overclaimed as ML.
+  - **FIXED (2026-09-29): the Rust engine is now actually wired into
+    `analyze`, and fed real data.** Previously (see the packaging-fix note
+    below) the compiled `pydbtguard._core` extension was importable but had
+    zero references anywhere under `pydbtguard/` — and even if it had been
+    called, there was no real historical failure data anywhere in this
+    codebase to call it *with*: `HistoricalReplayAnalyzer`
+    (`pydbtguard/analysis/replay.py`) fabricates an entirely synthetic
+    "fail every 10th day" pattern (see its own docstring, `_simulate_replay`
+    — **this part is still fake, not touched in this pass**, see below).
+    Added `pydbtguard/analysis/run_history.py`: reads dbt's own real
+    `target/run_results.json` (written after every real `dbt test`/`dbt
+    build`) and appends each real run's per-test pass/fail outcomes to a
+    local, persistent, genuinely-accumulating history file
+    (`.pydbtguard/run_history.jsonl`). `ReliabilityAnalyzer.analyze()` now
+    ingests the current real run on every invocation and calls the real
+    `FailurePredictor.predict_py()` with each test's real accumulated
+    history, populating `failure_probability`/`prediction_confidence`/
+    `likely_causes` in the real CLI output (previously these fields didn't
+    exist in the actual dict `analyze()` returns at all — `AnalysisReport`/
+    `ReliabilityScore` in `models/schemas.py` declare a `failure_probability`
+    field, but `reliability.py`'s real implementation has never constructed
+    those dataclasses, only ad-hoc dicts). On a fresh project with no
+    recorded runs yet, `failure_probability` is honestly `None` with an
+    explanatory `prediction_note`, not a fabricated number.
+  - **Verified two ways**: `tests/test_real_failure_prediction.py` (4 new
+    tests) constructs real dbt-artifact-shaped `run_results.json` files
+    across several simulated real runs and asserts the real Rust-derived
+    `failure_probability` genuinely tracks the real accumulated pass/fail
+    history (1 fail -> 1.0, +1 pass -> 0.5, +3 more passes -> 0.2) — not a
+    fabricated number. Also verified via a real CLI invocation
+    (`pydbtguard analyze .` against a real fake dbt project with a real
+    `run_results.json`) across two real runs, confirming the same
+    accumulation end-to-end through the actual command users run.
+  - **Explicitly still not fixed, to avoid overclaiming**: `pydbtguard
+    replay`'s `HistoricalReplayAnalyzer`/`_simulate_replay` (warehouse
+    point-in-time snapshot replay) remains 100% synthetic — this pass adds
+    a *separate*, real, local, dbt-artifact-based history mechanism for
+    `analyze`'s prediction, it does not implement warehouse-snapshot replay.
+    The underlying `FailurePredictor` algorithm is also still just "return
+    the historical failure rate" — genuinely wired to real data now, but
+    still not actually ML, matching this section's opening line.
 - **`docs/GETTING_STARTED.md`, `docs/API.md`, `docs/ROADMAP.md`,
   `docs/INSTALLATION.md`** — referenced by the pre-audit README's
   Documentation section. None of these files exist. Removed the dead links
