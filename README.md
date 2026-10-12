@@ -7,7 +7,7 @@ execution cost — all from static dbt metadata.
 [![CI](https://github.com/Mullassery/PyDBTGuard/actions/workflows/ci.yml/badge.svg)](https://github.com/Mullassery/PyDBTGuard/actions/workflows/ci.yml)
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-blue)](https://www.python.org)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](/LICENSE)
-[![Grapify](https://img.shields.io/badge/Grapify-Code%20Scan-purple)](https://grapify.ai)
+[![Graphify](https://img.shields.io/badge/Graphify-knowledge%20graph-blue)](https://github.com/Graphify-Labs/graphify)
 
 **Status: early / experimental.** Packaging now works and the full test
 suite passes (30/30), but one of the headline features (historical replay

@@ -63,3 +63,5 @@ logs/
 dist/
 build/
 *.egg-info/
+
+graphify-out/
