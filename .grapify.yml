@@ -1,0 +1,15 @@
+version: 1
+include:
+  - crates/**/*.rs
+  - bindings/**/*.rs
+  - pydbtguard/**/*.py
+  - tests/**/*.py
+exclude:
+  - target
+  - .venv
+  - __pycache__
+  - .pytest_cache
+  - dist
+  - build
+  - "*.egg-info"
+  - tests/fixtures
