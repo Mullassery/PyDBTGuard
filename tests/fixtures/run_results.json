@@ -1,0 +1,26 @@
+{
+  "metadata": {
+    "dbt_schema_version": "https://schemas.getdbt.com/dbt/run-results/v6.json",
+    "dbt_version": "1.8.0",
+    "generated_at": "2026-01-01T12:10:00.000000Z",
+    "invocation_id": "a1b2c3d4-2026-01-01-120000",
+    "project_name": "jaffle_shop",
+    "adapter_type": "bigquery"
+  },
+  "args": {},
+  "elapsed_time": 12.4,
+  "results": [
+    {"unique_id": "model.jaffle_shop.orders", "status": "success", "execution_time": 4.2},
+    {"unique_id": "test.jaffle_shop.unique_stg_customers_customer_id", "status": "pass", "execution_time": 0.4, "failures": 0},
+    {"unique_id": "test.jaffle_shop.not_null_stg_customers_customer_id", "status": "pass", "execution_time": 0.3, "failures": 0},
+    {"unique_id": "test.jaffle_shop.unique_stg_orders_order_id", "status": "pass", "execution_time": 0.5, "failures": 0},
+    {"unique_id": "test.jaffle_shop.not_null_stg_orders_order_id", "status": "pass", "execution_time": 0.3, "failures": 0},
+    {"unique_id": "test.jaffle_shop.not_null_stg_orders_customer_id", "status": "pass", "execution_time": 0.3, "failures": 0},
+    {"unique_id": "test.jaffle_shop.not_null_stg_payments_payment_id", "status": "pass", "execution_time": 0.3, "failures": 0},
+    {"unique_id": "test.jaffle_shop.unique_customers_customer_id", "status": "pass", "execution_time": 0.4, "failures": 0},
+    {"unique_id": "test.jaffle_shop.not_null_customers_customer_id", "status": "pass", "execution_time": 0.3, "failures": 0},
+    {"unique_id": "test.jaffle_shop.relationships_orders_customer_id__customer_id__ref_stg_customers", "status": "pass", "execution_time": 0.6, "failures": 0},
+    {"unique_id": "test.jaffle_shop.accepted_values_orders_status__placed__shipped__completed__return_pending__returned", "status": "pass", "execution_time": 0.4, "failures": 0},
+    {"unique_id": "test.jaffle_shop.assert_positive_amount", "status": "fail", "execution_time": 0.5, "failures": 3, "message": "Got 3 results, configured to fail if != 0"}
+  ]
+}

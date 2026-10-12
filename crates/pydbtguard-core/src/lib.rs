@@ -1,21 +1,22 @@
+//! PyDBTGuard analysis engine.
+//!
+//! Reads real, locally-produced dbt artifacts and produces real reports. There
+//! is no warehouse connection anywhere in this crate: `manifest.json`,
+//! `catalog.json`, `run_results.json`, and `sources.json` are the only inputs.
+//!
+//! The [`api`] module is the intended entry point for host bindings: each
+//! function takes artifact text and returns a JSON report string.
+
+pub mod api;
 pub mod cost;
-pub mod impact;
+pub mod coverage;
+pub mod drift;
+pub mod error;
+pub mod freshness;
+pub mod history;
 pub mod lineage;
-pub mod manifest;
-pub mod patterns;
-pub mod replay;
+pub mod model;
 pub mod stats;
 
-pub use cost::CostCalculator;
-pub use impact::BlastRadiusAnalyzer;
-pub use patterns::FailurePatternDetector;
-pub use replay::HistoricalReplayEngine;
-pub use stats::{fingerprint, predictor};
-
-#[derive(Debug, Clone)]
-pub struct AnalysisResult {
-    pub test_name: String,
-    pub reliability_score: f64,
-    pub failure_probability: f64,
-    pub stability_history: Vec<bool>,
-}
+pub use api::VERSION;
+pub use error::{Error, Result};

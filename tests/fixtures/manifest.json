@@ -1,0 +1,355 @@
+{
+  "metadata": {
+    "dbt_schema_version": "https://schemas.getdbt.com/dbt/manifest/v12.json",
+    "dbt_version": "1.8.0",
+    "generated_at": "2026-01-01T12:00:00.000000Z",
+    "project_name": "jaffle_shop",
+    "adapter_type": "bigquery"
+  },
+  "nodes": {
+    "model.jaffle_shop.stg_customers": {
+      "unique_id": "model.jaffle_shop.stg_customers",
+      "name": "stg_customers",
+      "resource_type": "model",
+      "package_name": "jaffle_shop",
+      "tags": ["staging"],
+      "config": {"materialized": "view"},
+      "depends_on": {"nodes": ["source.jaffle_shop.raw.raw_customers"]},
+      "columns": {
+        "customer_id": {"name": "customer_id", "data_type": "int64"},
+        "first_name": {"name": "first_name", "data_type": "string"},
+        "last_name": {"name": "last_name", "data_type": "string"}
+      }
+    },
+    "model.jaffle_shop.stg_orders": {
+      "unique_id": "model.jaffle_shop.stg_orders",
+      "name": "stg_orders",
+      "resource_type": "model",
+      "package_name": "jaffle_shop",
+      "tags": ["staging"],
+      "config": {"materialized": "view"},
+      "depends_on": {"nodes": ["source.jaffle_shop.raw.raw_orders"]},
+      "columns": {
+        "order_id": {"name": "order_id", "data_type": "int64"},
+        "customer_id": {"name": "customer_id", "data_type": "int64"},
+        "order_date": {"name": "order_date", "data_type": "date"},
+        "status": {"name": "status", "data_type": "string"}
+      }
+    },
+    "model.jaffle_shop.stg_payments": {
+      "unique_id": "model.jaffle_shop.stg_payments",
+      "name": "stg_payments",
+      "resource_type": "model",
+      "package_name": "jaffle_shop",
+      "tags": ["staging"],
+      "config": {"materialized": "view"},
+      "depends_on": {"nodes": ["source.jaffle_shop.raw.raw_payments"]},
+      "columns": {
+        "payment_id": {"name": "payment_id", "data_type": "int64"},
+        "order_id": {"name": "order_id", "data_type": "int64"},
+        "amount": {"name": "amount", "data_type": "int64"}
+      }
+    },
+    "model.jaffle_shop.customers": {
+      "unique_id": "model.jaffle_shop.customers",
+      "name": "customers",
+      "resource_type": "model",
+      "package_name": "jaffle_shop",
+      "tags": ["mart"],
+      "config": {"materialized": "table"},
+      "depends_on": {
+        "nodes": [
+          "model.jaffle_shop.stg_customers",
+          "model.jaffle_shop.stg_orders",
+          "model.jaffle_shop.stg_payments"
+        ]
+      },
+      "columns": {
+        "customer_id": {"name": "customer_id", "data_type": "int64"},
+        "first_name": {"name": "first_name", "data_type": "string"},
+        "last_name": {"name": "last_name", "data_type": "string"},
+        "number_of_orders": {"name": "number_of_orders", "data_type": "int64"},
+        "lifetime_value": {"name": "lifetime_value", "data_type": "int64"}
+      }
+    },
+    "model.jaffle_shop.orders": {
+      "unique_id": "model.jaffle_shop.orders",
+      "name": "orders",
+      "resource_type": "model",
+      "package_name": "jaffle_shop",
+      "tags": ["mart"],
+      "config": {"materialized": "table"},
+      "depends_on": {
+        "nodes": [
+          "model.jaffle_shop.stg_orders",
+          "model.jaffle_shop.stg_payments"
+        ]
+      },
+      "columns": {
+        "order_id": {"name": "order_id", "data_type": "int64"},
+        "customer_id": {"name": "customer_id", "data_type": "int64"},
+        "order_date": {"name": "order_date", "data_type": "date"},
+        "status": {"name": "status", "data_type": "string"},
+        "amount": {"name": "amount", "data_type": "int64"}
+      }
+    },
+    "test.jaffle_shop.unique_stg_customers_customer_id": {
+      "unique_id": "test.jaffle_shop.unique_stg_customers_customer_id",
+      "name": "unique_stg_customers_customer_id",
+      "resource_type": "test",
+      "package_name": "jaffle_shop",
+      "tags": [],
+      "config": {"severity": "error"},
+      "depends_on": {"nodes": ["model.jaffle_shop.stg_customers"]},
+      "column_name": "customer_id",
+      "test_metadata": {"name": "unique", "kwargs": {"column_name": "customer_id"}}
+    },
+    "test.jaffle_shop.not_null_stg_customers_customer_id": {
+      "unique_id": "test.jaffle_shop.not_null_stg_customers_customer_id",
+      "name": "not_null_stg_customers_customer_id",
+      "resource_type": "test",
+      "package_name": "jaffle_shop",
+      "tags": ["staging"],
+      "config": {"severity": "error"},
+      "depends_on": {"nodes": ["model.jaffle_shop.stg_customers"]},
+      "column_name": "customer_id",
+      "test_metadata": {"name": "not_null", "kwargs": {"column_name": "customer_id"}}
+    },
+    "test.jaffle_shop.unique_stg_orders_order_id": {
+      "unique_id": "test.jaffle_shop.unique_stg_orders_order_id",
+      "name": "unique_stg_orders_order_id",
+      "resource_type": "test",
+      "package_name": "jaffle_shop",
+      "tags": ["staging"],
+      "config": {"severity": "error"},
+      "depends_on": {"nodes": ["model.jaffle_shop.stg_orders"]},
+      "column_name": "order_id",
+      "test_metadata": {"name": "unique", "kwargs": {"column_name": "order_id"}}
+    },
+    "test.jaffle_shop.not_null_stg_orders_order_id": {
+      "unique_id": "test.jaffle_shop.not_null_stg_orders_order_id",
+      "name": "not_null_stg_orders_order_id",
+      "resource_type": "test",
+      "package_name": "jaffle_shop",
+      "tags": ["staging"],
+      "config": {"severity": "error"},
+      "depends_on": {"nodes": ["model.jaffle_shop.stg_orders"]},
+      "column_name": "order_id",
+      "test_metadata": {"name": "not_null", "kwargs": {"column_name": "order_id"}}
+    },
+    "test.jaffle_shop.not_null_stg_orders_customer_id": {
+      "unique_id": "test.jaffle_shop.not_null_stg_orders_customer_id",
+      "name": "not_null_stg_orders_customer_id",
+      "resource_type": "test",
+      "package_name": "jaffle_shop",
+      "tags": ["staging"],
+      "config": {"severity": "warn"},
+      "depends_on": {"nodes": ["model.jaffle_shop.stg_orders"]},
+      "column_name": "customer_id",
+      "test_metadata": {"name": "not_null", "kwargs": {"column_name": "customer_id"}}
+    },
+    "test.jaffle_shop.not_null_stg_payments_payment_id": {
+      "unique_id": "test.jaffle_shop.not_null_stg_payments_payment_id",
+      "name": "not_null_stg_payments_payment_id",
+      "resource_type": "test",
+      "package_name": "jaffle_shop",
+      "tags": ["staging"],
+      "config": {"severity": "error"},
+      "depends_on": {"nodes": ["model.jaffle_shop.stg_payments"]},
+      "column_name": "payment_id",
+      "test_metadata": {"name": "not_null", "kwargs": {"column_name": "payment_id"}}
+    },
+    "test.jaffle_shop.unique_customers_customer_id": {
+      "unique_id": "test.jaffle_shop.unique_customers_customer_id",
+      "name": "unique_customers_customer_id",
+      "resource_type": "test",
+      "package_name": "jaffle_shop",
+      "tags": ["mart"],
+      "config": {"severity": "error"},
+      "depends_on": {"nodes": ["model.jaffle_shop.customers"]},
+      "column_name": "customer_id",
+      "test_metadata": {"name": "unique", "kwargs": {"column_name": "customer_id"}}
+    },
+    "test.jaffle_shop.not_null_customers_customer_id": {
+      "unique_id": "test.jaffle_shop.not_null_customers_customer_id",
+      "name": "not_null_customers_customer_id",
+      "resource_type": "test",
+      "package_name": "jaffle_shop",
+      "tags": ["mart"],
+      "config": {"severity": "error"},
+      "depends_on": {"nodes": ["model.jaffle_shop.customers"]},
+      "column_name": "customer_id",
+      "test_metadata": {"name": "not_null", "kwargs": {"column_name": "customer_id"}}
+    },
+    "test.jaffle_shop.relationships_orders_customer_id__customer_id__ref_stg_customers": {
+      "unique_id": "test.jaffle_shop.relationships_orders_customer_id__customer_id__ref_stg_customers",
+      "name": "relationships_orders_customer_id__customer_id__ref_stg_customers",
+      "resource_type": "test",
+      "package_name": "jaffle_shop",
+      "tags": ["mart"],
+      "config": {"severity": "error"},
+      "depends_on": {
+        "nodes": [
+          "model.jaffle_shop.orders",
+          "model.jaffle_shop.stg_customers"
+        ]
+      },
+      "column_name": "customer_id",
+      "test_metadata": {
+        "name": "relationships",
+        "kwargs": {
+          "column_name": "customer_id",
+          "field": "customer_id",
+          "to": "ref('stg_customers')"
+        }
+      }
+    },
+    "test.jaffle_shop.accepted_values_orders_status__placed__shipped__completed__return_pending__returned": {
+      "unique_id": "test.jaffle_shop.accepted_values_orders_status__placed__shipped__completed__return_pending__returned",
+      "name": "accepted_values_orders_status__placed__shipped__completed__return_pending__returned",
+      "resource_type": "test",
+      "package_name": "jaffle_shop",
+      "tags": ["mart"],
+      "config": {"severity": "error"},
+      "depends_on": {"nodes": ["model.jaffle_shop.orders"]},
+      "column_name": "status",
+      "test_metadata": {
+        "name": "accepted_values",
+        "kwargs": {
+          "column_name": "status",
+          "values": ["placed", "shipped", "completed", "return_pending", "returned"]
+        }
+      }
+    },
+    "test.jaffle_shop.assert_positive_amount": {
+      "unique_id": "test.jaffle_shop.assert_positive_amount",
+      "name": "assert_positive_amount",
+      "resource_type": "test",
+      "package_name": "jaffle_shop",
+      "tags": ["finance"],
+      "config": {"severity": "error"},
+      "depends_on": {"nodes": ["model.jaffle_shop.stg_payments"]},
+      "raw_code": "select * from {{ ref('stg_payments') }} where amount < 0",
+      "compiled_code": "select * from `jaffle_shop`.`stg_payments` where amount < 0"
+    }
+  },
+  "sources": {
+    "source.jaffle_shop.raw.raw_customers": {
+      "unique_id": "source.jaffle_shop.raw.raw_customers",
+      "name": "raw_customers",
+      "resource_type": "source",
+      "package_name": "jaffle_shop",
+      "source_name": "raw",
+      "columns": {
+        "id": {"name": "id", "data_type": "int64"},
+        "first_name": {"name": "first_name", "data_type": "string"}
+      }
+    },
+    "source.jaffle_shop.raw.raw_orders": {
+      "unique_id": "source.jaffle_shop.raw.raw_orders",
+      "name": "raw_orders",
+      "resource_type": "source",
+      "package_name": "jaffle_shop",
+      "source_name": "raw",
+      "columns": {
+        "id": {"name": "id", "data_type": "int64"},
+        "user_id": {"name": "user_id", "data_type": "int64"},
+        "status": {"name": "status", "data_type": "string"}
+      }
+    },
+    "source.jaffle_shop.raw.raw_payments": {
+      "unique_id": "source.jaffle_shop.raw.raw_payments",
+      "name": "raw_payments",
+      "resource_type": "source",
+      "package_name": "jaffle_shop",
+      "source_name": "raw",
+      "columns": {
+        "id": {"name": "id", "data_type": "int64"},
+        "order_id": {"name": "order_id", "data_type": "int64"},
+        "amount": {"name": "amount", "data_type": "int64"}
+      }
+    }
+  },
+  "exposures": {
+    "exposure.jaffle_shop.orders_dashboard": {
+      "unique_id": "exposure.jaffle_shop.orders_dashboard",
+      "name": "orders_dashboard",
+      "resource_type": "exposure",
+      "package_name": "jaffle_shop",
+      "depends_on": {
+        "nodes": [
+          "model.jaffle_shop.customers",
+          "model.jaffle_shop.orders"
+        ]
+      }
+    }
+  },
+  "parent_map": {
+    "model.jaffle_shop.stg_customers": ["source.jaffle_shop.raw.raw_customers"],
+    "model.jaffle_shop.stg_orders": ["source.jaffle_shop.raw.raw_orders"],
+    "model.jaffle_shop.stg_payments": ["source.jaffle_shop.raw.raw_payments"],
+    "model.jaffle_shop.customers": [
+      "model.jaffle_shop.stg_customers",
+      "model.jaffle_shop.stg_orders",
+      "model.jaffle_shop.stg_payments"
+    ],
+    "model.jaffle_shop.orders": [
+      "model.jaffle_shop.stg_orders",
+      "model.jaffle_shop.stg_payments"
+    ],
+    "test.jaffle_shop.unique_stg_customers_customer_id": ["model.jaffle_shop.stg_customers"],
+    "test.jaffle_shop.not_null_stg_customers_customer_id": ["model.jaffle_shop.stg_customers"],
+    "test.jaffle_shop.unique_stg_orders_order_id": ["model.jaffle_shop.stg_orders"],
+    "test.jaffle_shop.not_null_stg_orders_order_id": ["model.jaffle_shop.stg_orders"],
+    "test.jaffle_shop.not_null_stg_orders_customer_id": ["model.jaffle_shop.stg_orders"],
+    "test.jaffle_shop.not_null_stg_payments_payment_id": ["model.jaffle_shop.stg_payments"],
+    "test.jaffle_shop.unique_customers_customer_id": ["model.jaffle_shop.customers"],
+    "test.jaffle_shop.not_null_customers_customer_id": ["model.jaffle_shop.customers"],
+    "test.jaffle_shop.relationships_orders_customer_id__customer_id__ref_stg_customers": [
+      "model.jaffle_shop.orders",
+      "model.jaffle_shop.stg_customers"
+    ],
+    "test.jaffle_shop.accepted_values_orders_status__placed__shipped__completed__return_pending__returned": [
+      "model.jaffle_shop.orders"
+    ],
+    "test.jaffle_shop.assert_positive_amount": ["model.jaffle_shop.stg_payments"],
+    "exposure.jaffle_shop.orders_dashboard": [
+      "model.jaffle_shop.customers",
+      "model.jaffle_shop.orders"
+    ]
+  },
+  "child_map": {
+    "source.jaffle_shop.raw.raw_customers": ["model.jaffle_shop.stg_customers"],
+    "source.jaffle_shop.raw.raw_orders": ["model.jaffle_shop.stg_orders"],
+    "source.jaffle_shop.raw.raw_payments": ["model.jaffle_shop.stg_payments"],
+    "model.jaffle_shop.stg_customers": [
+      "model.jaffle_shop.customers",
+      "test.jaffle_shop.unique_stg_customers_customer_id",
+      "test.jaffle_shop.not_null_stg_customers_customer_id"
+    ],
+    "model.jaffle_shop.stg_orders": [
+      "model.jaffle_shop.customers",
+      "model.jaffle_shop.orders",
+      "test.jaffle_shop.unique_stg_orders_order_id",
+      "test.jaffle_shop.not_null_stg_orders_order_id",
+      "test.jaffle_shop.not_null_stg_orders_customer_id"
+    ],
+    "model.jaffle_shop.stg_payments": [
+      "model.jaffle_shop.customers",
+      "model.jaffle_shop.orders",
+      "test.jaffle_shop.not_null_stg_payments_payment_id",
+      "test.jaffle_shop.assert_positive_amount"
+    ],
+    "model.jaffle_shop.customers": [
+      "test.jaffle_shop.unique_customers_customer_id",
+      "test.jaffle_shop.not_null_customers_customer_id",
+      "exposure.jaffle_shop.orders_dashboard"
+    ],
+    "model.jaffle_shop.orders": [
+      "test.jaffle_shop.relationships_orders_customer_id__customer_id__ref_stg_customers",
+      "test.jaffle_shop.accepted_values_orders_status__placed__shipped__completed__return_pending__returned",
+      "exposure.jaffle_shop.orders_dashboard"
+    ],
+    "exposure.jaffle_shop.orders_dashboard": []
+  }
+}

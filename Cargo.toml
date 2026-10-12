@@ -3,8 +3,12 @@ members = ["crates/pydbtguard-core", "bindings/python"]
 resolver = "2"
 
 [workspace.package]
-version = "0.1.0"
+version = "2.0.0"
 edition = "2021"
 license = "Apache-2.0"
 repository = "https://github.com/Mullassery/PyDBTGuard"
-authors = ["Georgi Mammen Mullassery <mullassery@gmail.com>"]
+authors = ["Georgi Mullassery <mullassery@gmail.com>"]
+
+[profile.release]
+lto = "thin"
+codegen-units = 1

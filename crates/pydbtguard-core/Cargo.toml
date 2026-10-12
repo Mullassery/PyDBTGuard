@@ -1,16 +1,15 @@
 [package]
 name = "pydbtguard-core"
+description = "Analysis engine for PyDBTGuard: reads real dbt artifacts (manifest, catalog, run_results, sources) and produces real reports, with no warehouse connection."
 version.workspace = true
 edition.workspace = true
 license.workspace = true
+repository.workspace = true
 
 [dependencies]
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
-polars = { version = "0.20" }
-ndarray = "0.15"
-statrs = "0.16"
-nalgebra = "0.32"
-thiserror = "1.0"
-log = "0.4"
-chrono = { version = "0.4", features = ["serde"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+thiserror = "2"
+
+[dev-dependencies]
+serde_json = "1"

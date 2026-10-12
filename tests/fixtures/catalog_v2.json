@@ -1,0 +1,96 @@
+{
+  "metadata": {
+    "dbt_schema_version": "https://schemas.getdbt.com/dbt/catalog/v1.json",
+    "dbt_version": "1.8.0",
+    "generated_at": "2026-01-08T12:05:00.000000Z",
+    "project_name": "jaffle_shop",
+    "adapter_type": "bigquery"
+  },
+  "nodes": {
+    "model.jaffle_shop.stg_customers": {
+      "unique_id": "model.jaffle_shop.stg_customers",
+      "metadata": {"type": "VIEW", "schema": "jaffle_shop", "name": "stg_customers", "database": "jaffle-warehouse"},
+      "columns": {
+        "customer_id": {"name": "customer_id", "type": "INT64"},
+        "first_name": {"name": "first_name", "type": "STRING"},
+        "last_name": {"name": "last_name", "type": "STRING"}
+      },
+      "stats": {
+        "row_count": {"id": "row_count", "label": "Row Count", "value": 100, "include": true},
+        "bytes": {"id": "bytes", "label": "Approximate Size", "value": 2048000, "include": true}
+      }
+    },
+    "model.jaffle_shop.stg_orders": {
+      "unique_id": "model.jaffle_shop.stg_orders",
+      "metadata": {"type": "VIEW", "schema": "jaffle_shop", "name": "stg_orders", "database": "jaffle-warehouse"},
+      "columns": {
+        "order_id": {"name": "order_id", "type": "INT64"},
+        "customer_id": {"name": "customer_id", "type": "INT64"},
+        "order_date": {"name": "order_date", "type": "DATE"},
+        "status": {"name": "status", "type": "STRING"}
+      },
+      "stats": {
+        "row_count": {"id": "row_count", "label": "Row Count", "value": 100000, "include": true},
+        "bytes": {"id": "bytes", "label": "Approximate Size", "value": 18000000, "include": true}
+      }
+    },
+    "model.jaffle_shop.stg_payments": {
+      "unique_id": "model.jaffle_shop.stg_payments",
+      "metadata": {"type": "VIEW", "schema": "jaffle_shop", "name": "stg_payments", "database": "jaffle-warehouse"},
+      "columns": {
+        "payment_id": {"name": "payment_id", "type": "INT64"},
+        "order_id": {"name": "order_id", "type": "INT64"},
+        "amount": {"name": "amount", "type": "INT64"}
+      },
+      "stats": {
+        "row_count": {"id": "row_count", "label": "Row Count", "value": 113000, "include": true},
+        "bytes": {"id": "bytes", "label": "Approximate Size", "value": 3400000000, "include": true}
+      }
+    },
+    "model.jaffle_shop.customers": {
+      "unique_id": "model.jaffle_shop.customers",
+      "metadata": {"type": "TABLE", "schema": "jaffle_shop", "name": "customers", "database": "jaffle-warehouse"},
+      "columns": {
+        "customer_id": {"name": "customer_id", "type": "INT64"},
+        "first_name": {"name": "first_name", "type": "STRING"},
+        "last_name": {"name": "last_name", "type": "STRING"},
+        "number_of_orders": {"name": "number_of_orders", "type": "INT64"},
+        "lifetime_value": {"name": "lifetime_value", "type": "INT64"}
+      },
+      "stats": {
+        "row_count": {"id": "row_count", "label": "Row Count", "value": 150, "include": true},
+        "bytes": {"id": "bytes", "label": "Approximate Size", "value": 125000000, "include": true}
+      }
+    },
+    "model.jaffle_shop.orders": {
+      "unique_id": "model.jaffle_shop.orders",
+      "metadata": {"type": "TABLE", "schema": "jaffle_shop", "name": "orders", "database": "jaffle-warehouse"},
+      "columns": {
+        "order_id": {"name": "order_id", "type": "INT64"},
+        "customer_id": {"name": "customer_id", "type": "INT64"},
+        "order_date": {"name": "order_date", "type": "DATE"},
+        "status": {"name": "status", "type": "INT64"},
+        "lifetime_value": {"name": "lifetime_value", "type": "INT64"}
+      },
+      "stats": {
+        "row_count": {"id": "row_count", "label": "Row Count", "value": 1500000, "include": true},
+        "bytes": {"id": "bytes", "label": "Approximate Size", "value": 3100000000, "include": true}
+      }
+    }
+  },
+  "sources": {
+    "source.jaffle_shop.raw.raw_orders": {
+      "unique_id": "source.jaffle_shop.raw.raw_orders",
+      "metadata": {"type": "TABLE", "schema": "raw", "name": "raw_orders", "database": "jaffle-warehouse"},
+      "columns": {
+        "id": {"name": "id", "type": "INT64"},
+        "user_id": {"name": "user_id", "type": "INT64"},
+        "status": {"name": "status", "type": "STRING"}
+      },
+      "stats": {
+        "row_count": {"id": "row_count", "label": "Row Count", "value": 100000, "include": true},
+        "bytes": {"id": "bytes", "label": "Approximate Size", "value": 18000000, "include": true}
+      }
+    }
+  }
+}
