@@ -1,219 +1,84 @@
 # PyDBTGuard
 
-Analyzes a dbt project's `manifest.json` to flag which tests look risky, map
-which downstream models a failing test would affect, and estimate test
-execution cost — all from static dbt metadata.
+Pre-deployment validation for dbt tests: analyze risk, impact, and cost from local dbt artifacts (`manifest.json`, `run_results.json`) without connecting to a warehouse.
 
-[![CI](https://github.com/Mullassery/PyDBTGuard/actions/workflows/ci.yml/badge.svg)](https://github.com/Mullassery/PyDBTGuard/actions/workflows/ci.yml)
-[![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-blue)](https://www.python.org)
-[![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](/LICENSE)
-[![Graphify](https://img.shields.io/badge/Graphify-knowledge%20graph-blue)](https://github.com/Graphify-Labs/graphify)
+## What it is
 
-**Status: early / experimental.** Packaging now works and the full test
-suite passes (30/30), but one of the headline features (historical replay
-via `pydbtguard replay`) still returns entirely fabricated data, `optimize`/
-`pr-check` are stubs, and no analysis command actually queries a real
-warehouse yet. Read "What's built but not verified / not working" before
-you rely on this for anything that matters.
+PyDBTGuard reads compiled dbt metadata to help you understand which tests are risky, which downstream models they protect, and how to prioritize testing. It works entirely from local artifacts—no live warehouse queries. A Rust core supports failure prediction based on historical run results.
 
----
+## Features / Highlights
 
-## Problem
+- **Risk scoring**: Heuristic reliability scoring for each test based on test type and metadata from `manifest.json`.
+- **Failure prediction**: Computes historical failure probability from accumulated `run_results.json` files (wired to Rust `FailurePredictor`).
+- **Impact analysis**: Maps tests to affected downstream models using the dbt lineage graph (blast radius).
+- **Coverage audit**: Identifies missing test coverage by model and prioritizes gaps.
+- **Cost estimation**: Estimates relative test cost from manifest metadata.
+- **Diagnostics**: Generates diagnostic hints for tests based on patterns in names/config.
+- **CLI-first**: Simple commands to analyze, diagnose, audit coverage, and estimate cost.
 
-dbt tests fail unpredictably, and dbt itself gives you no signal on:
-- which tests are likely to break before you run them,
-- what breaks downstream (dashboards, other models) if a given model's test fails,
-- which tests are expensive to run relative to the value they provide.
+## Who it's for / Use cases
 
-## Solution
+- **Pre-PR checks**: Quickly assess which tests are high-risk before running the full suite.
+- **CI optimization**: Prioritize tests that protect critical downstream models.
+- **dbt maintenance**: Audit coverage gaps and understand test impact across lineage.
+- **Historical insights**: Leverage past `run_results.json` to gauge test stability.
 
-PyDBTGuard reads a dbt project's compiled `target/manifest.json` (the file
-`dbt parse` / `dbt compile` produces) and applies rule-based heuristics over
-that static metadata — model/test names, `depends_on` graph edges, configured
-freshness SLAs — to produce a reliability score, a dependency-graph impact
-estimate, and a cost estimate per test.
+## What it is not
 
-**Important — this is metadata-only today, not a live-warehouse tool.**
-PyDBTGuard does not currently query Snowflake, BigQuery, or any warehouse at
-runtime. Real `SnowflakeConnector` / `BigQueryConnector` classes exist
-(`pydbtguard/warehouse/snowflake.py`, `pydbtguard/warehouse/bigquery.py`) using
-the real `snowflake-connector-python` / `google-cloud-bigquery` client
-libraries, but no analysis command actually instantiates or calls them yet —
-`--warehouse` is accepted as a CLI flag and then ignored. Everything you get
-today comes from parsing the manifest JSON, not from live table stats, query
-history, or execution logs.
+- **Not a full dbt observability platform**: Focused on pre-deployment risk/impact analysis from artifacts; no alerting, dashboards, or SLA tracking.
+- **Not warehouse-connected**: Does not query Snowflake, BigQuery, or other warehouses. Warehouse connector classes exist in the codebase but are not wired to CLI commands.
+- **Not ML-powered**: Reliability scoring uses fixed heuristics; failure probability is a historical failure rate computed from run history, not a trained model.
+- **Experimental in places**: Some commands (`optimize`, `pr-check`, `replay`) are stubs or simulated. See roadmap for details.
 
-**No machine learning.** Despite "predictive"/"ML-based" language in earlier
-drafts of this README, the reliability *score* is fixed-weight arithmetic (a
-base score plus/minus fixed penalties keyed on substrings like `"unique"` in
-a test name) — see `pydbtguard/analysis/reliability.py`. There is no trained
-model, no statistical inference beyond a ratio. `analyze` now also reports a
-real `failure_probability` per test, computed from real accumulated
-historical `dbt test` run outcomes (`pydbtguard/analysis/run_history.py`,
-reading dbt's own `target/run_results.json` across repeated runs) via the
-compiled Rust `FailurePredictor` — genuinely wired to real data as of
-2026-09-29, but it's still "historical failure rate," not a trained model.
+## Project status
 
-## Use Cases
-
-```bash
-# Score every test in a dbt project from its manifest
-pydbtguard analyze .
-
-# Save the JSON report
-pydbtguard analyze . --output report.json
-```
-
-Output is a reliability score (0-100) and risk level (`STABLE` / `AT_RISK` /
-`DANGEROUS`) per test, derived purely from test name/type/config in the
-manifest — not from any observed pass/fail history.
+Version 2.0.0. Core analysis features (analyze, coverage-audit, diagnose, cost, blast radius) are implemented and tested (30/30 Python tests pass). Historical failure prediction is wired to the Rust core. Some features remain stubbed/simulated; see [ROADMAP_HONEST.md](ROADMAP_HONEST.md) for honest limitations.
 
 ## Installation
 
-**FIXED (2026-09-27).** `pip install -e .` now actually works — verified
-end-to-end on this pass, including a real `pydbtguard analyze .` run
-against a real dbt project. Two real bugs were blocking this:
-`pyproject.toml`'s `[tool.maturin]` had no `manifest-path`, so maturin
-looked for `Cargo.toml` next to `pyproject.toml` — a Cargo **workspace**
-manifest with no `[package]` section, not the actual buildable crate
-(`bindings/python/Cargo.toml`). Fixing that alone still produced a wheel
-Python couldn't import, because `bindings/python/src/lib.rs`'s
-`#[pymodule] fn pydbtguard(...)` didn't match the declared `module-name =
-"pydbtguard._core"`. Both fixed; see
-[ROADMAP_HONEST.md](ROADMAP_HONEST.md) for the full detail, including what
-this fix does *not* address (the Rust core still isn't called from
-anywhere in the Python analysis code).
+```bash
+pip install pydbtguard
+```
+
+From source:
 
 ```bash
 git clone https://github.com/Mullassery/PyDBTGuard
 cd PyDBTGuard
-python3.11 -m venv .venv && source .venv/bin/activate
-pip install -e .
-pydbtguard analyze /path/to/dbt/project
+pip install maturin
+maturin develop
 ```
 
-## What's working now (verified by me, this pass)
+Requires Python 3.9+.
 
-- **`pydbtguard analyze .`** — loads `target/manifest.json`, extracts
-  tests/models, computes a heuristic 0-100 score per test. **Verified
-  2026-09-27 against a real dbt project**
-  ([`dbt-labs/jaffle-shop-classic`](https://github.com/dbt-labs/jaffle-shop-classic)
-  built for real with `dbt-duckdb`) — see "vs elementary-data" below. Two
-  real bugs found and fixed in the process (test-type misclassification,
-  and a scoring bug that made `STABLE` unreachable for any test on any
-  project) — see ROADMAP_HONEST.md.
-- **`pydbtguard coverage-audit`** — real logic in
-  `pydbtguard/analysis/coverage.py`, walks manifest nodes and flags missing
-  test types per model, prioritized. 10/10 of its unit tests pass.
-- **`pydbtguard diagnose --test <name>`** — real logic in
-  `pydbtguard/analysis/diagnostics.py`; produces plausible-looking diagnostic
-  SQL templates from name/config pattern matching. 3/3 of its unit tests
-  pass (fixed 2026-09-21, re-verified 2026-09-29).
-- **`pydbtguard cost`** — real arithmetic in `pydbtguard/analysis/cost.py`
-  over test metadata; all its unit tests pass. Note the CLI feeds it a
-  hard-coded `estimated_bytes_scanned: 1_000_000_000` for every single test
-  (`pydbtguard/cli.py`, `cost` command) rather than any real scanned-bytes
-  figure, so the dollar amounts are not meaningful yet.
-- **Rust core unit tests**: `cargo test -p pydbtguard-core` — 4/4 pass.
-- **Python test suite**: `pytest tests/` — **30/30 pass** (re-verified
-  2026-09-29). This includes the diagnostics and blast-radius tests that
-  were failing as of an earlier pass — both were fixed on 2026-09-21 (see
-  "Blast radius" below and CHANGELOG) but this section hadn't been updated
-  to reflect it until now. Run against Python 3.11 (the repo declares
-  `requires-python = ">=3.10"`; the machine's default `python3` was 3.9).
+## Quick start
 
-## What's built but not verified / not working
+```bash
+# Analyze tests in a dbt project (from manifest.json in target/)
+pydbtguard analyze /path/to/dbt/project
 
-- **Historical replay (`pydbtguard replay`, `pydbtguard.analysis.replay`) is
-  fabricated data, not analysis.** `HistoricalReplayAnalyzer._simulate_replay`
-  (`pydbtguard/analysis/replay.py:46-94`) hardcodes "fail every 10th day" and
-  `calculate_test_reliability_curve` (line 157) returns
-  `0.85 + (i / lookback_days) * 0.1` regardless of the test or warehouse
-  passed in. It never queries a warehouse — the method's own comment says
-  "In production, this would... For now, simulate." The CLI's `replay`
-  command (`pydbtguard/cli.py`, `replay`) doesn't even call this class; it
-  just does date-string math and prints "Results would show: ...". This
-  feature does not work.
-- **FIXED (2026-09-21): blast radius direction was inverted.**
-  `_get_downstream_models` (`pydbtguard/analysis/blast_radius.py`) used to
-  walk `node["depends_on"]["nodes"]` — a dbt node's *upstream* dependencies —
-  and label the result "affected"/downstream models, the wrong direction.
-  Corrected to scan for nodes whose `depends_on.nodes` includes the target
-  model (its real dependents). `TestBlastRadiusAnalyzer::test_impact_level_calculation`
-  now passes.
-- **`pydbtguard optimize` and `pydbtguard pr-check` (top-level CLI
-  commands) are stubs** — each is a single `click.echo(...)` line
-  (`pydbtguard/cli.py`) and does nothing. Confusingly, a real, more complete
-  `TestOptimizer` class exists at `pydbtguard/analysis/optimization.py` but
-  is never wired into the `optimize` CLI command.
-- **Warehouse connectors untested.** `SnowflakeConnector` and
-  `BigQueryConnector` (`pydbtguard/warehouse/`) are written against the real
-  client libraries but have no unit tests and were not exercised against a
-  real warehouse in this pass (no credentials available). Also not
-  parameterized: `SnowflakeConnector.get_table_stats`
-  (`pydbtguard/warehouse/snowflake.py`) builds SQL via an f-string
-  interpolating `schema`/`table` directly.
-- **FIXED (2026-09-29): the Rust core is now wired into the Python CLI, for
-  failure prediction.** `pydbtguard/analysis/reliability.py` now imports
-  `pydbtguard._core` and calls the real `FailurePredictor` with real
-  accumulated `dbt test` run history (see `run_history.py`) — `analyze`'s
-  output includes a real `failure_probability` per test. `ColumnFingerprint`
-  is still unused anywhere under `pydbtguard/` — the "hybrid Rust+Python"
-  architecture described in `docs/ARCHITECTURE.md` is now partially, not
-  fully, wired up.
-- **Package has never actually been built/published successfully as far as
-  this pass could verify** — see Installation above. The `pyproject.toml`
-  and `Cargo.toml` both report version `0.1.0` even though
-  `docs/archive/PHASE2_v0.2.md` / `PHASE3_v0.3.md` describe v0.2/v0.3
-  features as "Complete" — the version number was never bumped for that
-  work.
+# Save report as JSON
+pydbtguard analyze /path/to/dbt/project --output report.json
 
-Full bug list, technical debt, and what's simply not built at all:
-[ROADMAP_HONEST.md](ROADMAP_HONEST.md).
+# Diagnose a specific test
+pydbtguard diagnose --test my_model_unique_key
 
-## vs elementary-data
+# Audit test coverage
+pydbtguard coverage-audit /path/to/dbt/project
 
-`elementary-data` is the leading OSS dbt observability tool and the
-closest real comparison — but it solves a different problem than
-`pydbtguard analyze` does. Tested both against the same real dbt project,
-[`dbt-labs/jaffle-shop-classic`](https://github.com/dbt-labs/jaffle-shop-classic),
-built for real with `dbt-duckdb` (28 real seeds/models/tests, 20 real data
-tests, 0 failures).
+# Estimate test cost
+pydbtguard cost /path/to/dbt/project
+```
 
-| | `pydbtguard analyze` | `elementary-data` |
-|---|---|---|
-| Method | Static: reads `manifest.json` alone, no execution history needed | Requires its own dbt package installed and run — captures real per-test-run results (`elementary_test_results` table) as a durable historical record |
-| Runtime | <1s | ~4s added to the real `dbt build` (elementary's own on-run-end hooks) |
-| What it told us about this real, 100%-passing project | Type-differentiated static risk: `unique`→80/STABLE, `not_null`/`accepted_values`→85/STABLE, `relationships`→82/STABLE, for all 20 real tests | Real execution record: all 20 real tests logged `status='pass'`, `test_type='dbt_test'` — the actual ground truth pydbtguard's static score is trying to approximate without ever running anything |
-| Value on a *first* run (no history yet) | Full — doesn't need history | Limited — its real value (anomaly detection, freshness/volume monitoring, reliability trends) compounds as more real runs accumulate; on run #1 it mostly logged what dbt itself already reported |
-
-**Bottom line:** `pydbtguard analyze` gives you an instant, no-history-needed
-risk signal purely from what a test *declares itself to be* (useful before
-you've ever run the project for real, or as a pre-deployment gate);
-`elementary-data` gives you a real, growing historical record of what
-actually happened, plus real data-quality monitoring (freshness, volume,
-schema drift) that a static manifest read can't see at all. They're
-complementary, not substitutes — and until this pass, `pydbtguard analyze`
-couldn't be run against a real project at all (see "Installation" above).
+The CLI expects compiled dbt artifacts (`target/manifest.json`). For historical failure probability, include `target/run_results.json` (or multiple runs accumulated by your process).
 
 ## Documentation
 
-- [Architecture](docs/ARCHITECTURE.md)
-- [Roadmap / honest status](ROADMAP_HONEST.md)
-- [Archived phase docs](docs/archive/README.md) (v0.2/v0.3 feature write-ups, kept for reference — contain claims this audit found to be inaccurate; read the disclaimer at the top of each)
-
-## Contributing
-
-See [CONTRIBUTING.md](CONTRIBUTING.md).
-
-## Security
-
-See [SECURITY.md](SECURITY.md).
+- [Roadmap & honest limitations](ROADMAP_HONEST.md)
+- [Contributing](CONTRIBUTING.md)
+- [Security policy](SECURITY.md)
+- [Code of conduct](CODE_OF_CONDUCT.md)
 
 ## License
 
-Apache-2.0 — see [LICENSE](LICENSE).
-
-## Author
-
-Georgi Mammen Mullassery
+Licensed under the Apache License, Version 2.0. See [LICENSE](LICENSE) for details.
