@@ -69,9 +69,13 @@ def analyze(ctx: click.Context, project_path: str) -> None:
     store = RunHistoryStore(project)
     recorded = 0
     try:
-        recorded = store.record_from_run_results(artifacts.run_results_text(project))
+        run_results_text = artifacts.run_results_text(project)
     except ArtifactError:
         pass  # no run_results.json yet; history may still exist
+    else:
+        # A malformed run_results.json raises ArtifactError here, which the
+        # group turns into a clean ClickException rather than being swallowed.
+        recorded = store.record_from_run_results(run_results_text)
 
     payload = _call(_core.analyze, manifest, store.history_text())
 

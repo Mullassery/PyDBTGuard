@@ -15,7 +15,10 @@ accumulates the real per-test outcomes from ``run_results.json`` across runs.
 from __future__ import annotations
 
 import json
+import logging
 from pathlib import Path
+
+logger = logging.getLogger(__name__)
 
 HISTORY_DIR = ".pydbtguard"
 HISTORY_FILE = "run_history.jsonl"
@@ -95,8 +98,14 @@ class RunHistoryStore:
         snapshots = []
         for line in self.path.read_text(encoding="utf-8").splitlines():
             line = line.strip()
-            if line:
+            if not line:
+                continue
+            try:
                 snapshots.append(json.loads(line))
+            except ValueError as exc:
+                logger.warning(
+                    "skipping corrupt run-history line in %s: %s", self.path, exc
+                )
         return snapshots
 
     def record_from_run_results(self, run_results_text: str) -> int:
@@ -105,7 +114,10 @@ class RunHistoryStore:
         Only real test nodes are recorded, and only their real
         pass/fail/error/skipped status. Returns ``0`` when there is nothing new.
         """
-        data = json.loads(run_results_text)
+        try:
+            data = json.loads(run_results_text)
+        except ValueError as exc:
+            raise ArtifactError(f"run_results.json is not valid JSON: {exc}") from exc
         meta = data.get("metadata", {}) or {}
         results: dict[str, str] = {}
         for node in data.get("results", []):
