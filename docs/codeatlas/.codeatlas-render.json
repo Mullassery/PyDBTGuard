@@ -1,0 +1,23 @@
+{
+  "version": 1,
+  "outputs": {
+    "md": [
+      "bindings.1.md",
+      "crates.2.md",
+      "overview.md",
+      "pydbtguard_core.2.1.md",
+      "python.1.1.md",
+      "tests.5.md",
+      "tools.6.md"
+    ],
+    "html": [
+      "bindings.1.html",
+      "crates.2.html",
+      "overview.html",
+      "pydbtguard_core.2.1.html",
+      "python.1.1.html",
+      "tests.5.html",
+      "tools.6.html"
+    ]
+  }
+}
