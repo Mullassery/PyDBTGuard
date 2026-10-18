@@ -54,5 +54,7 @@ added/removed/modified models, added/removed tests, and affected-test mapping.
 4 passed. Version `2.2.0`. A composite GitHub Action + example is in
 `.github/actions/dbt-diff` / `docs/CI.md`.
 
-Still open: publishing to PyPI, verifying the PR action on a real dbt project,
-and replacing the remaining stubbed commands.
+Added a release workflow (Linux/macOS/Windows/sdist + PyPI Trusted Publishing)
+and `docs/RELEASE.md`. Still open: the actual PyPI Trusted Publisher setup,
+verifying the PR action on a real dbt project, and replacing the remaining
+stubbed commands.

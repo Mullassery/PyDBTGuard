@@ -112,6 +112,11 @@ A composite GitHub Action and PR example live in
 [`docs/CI.md`](docs/CI.md). It runs the manifest diff and writes the report to
 the job summary.
 
+## Releasing
+
+See [`docs/RELEASE.md`](docs/RELEASE.md) for the Trusted Publishing setup and
+the wheel matrix.
+
 ## Documentation
 
 - [Roadmap & honest limitations](ROADMAP_HONEST.md)
