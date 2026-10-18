@@ -64,4 +64,4 @@ dist/
 build/
 *.egg-info/
 
-graphify-out/
+codeatlas-out/
