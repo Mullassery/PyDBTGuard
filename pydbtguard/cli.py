@@ -308,6 +308,38 @@ def drift(ctx: click.Context, old_path: str, new_path: str) -> None:
         click.echo(f"  {node['unique_id']}: {'; '.join(parts)}")
 
 
+@cli.command()
+@click.argument("base_manifest", type=click.Path(exists=True, dir_okay=False))
+@click.argument("current_manifest", type=click.Path(exists=True, dir_okay=False))
+@click.option(
+    "--fail-on-change",
+    is_flag=True,
+    help="Exit 1 when any model or test was added/removed/modified (for CI).",
+)
+@click.pass_context
+def diff(
+    ctx: click.Context,
+    base_manifest: str,
+    current_manifest: str,
+    fail_on_change: bool,
+) -> None:
+    """Compare two dbt manifest.json files (state:modified without a warehouse)."""
+    from .manifest_diff import diff_manifests, load_manifest, render_text
+
+    try:
+        result = diff_manifests(load_manifest(base_manifest), load_manifest(current_manifest))
+    except (OSError, ValueError) as exc:
+        raise click.ClickException(str(exc)) from exc
+
+    if ctx.obj["as_json"]:
+        _dump(result.to_dict())
+    else:
+        click.echo(render_text(result))
+
+    if fail_on_change and result.has_changes:
+        raise click.exceptions.Exit(1)
+
+
 def main() -> None:
     cli()
 

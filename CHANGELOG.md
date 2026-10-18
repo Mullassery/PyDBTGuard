@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.1.0] - 2026-10-19
+### Added
+- `pydbtguard diff BASE_MANIFEST CURRENT_MANIFEST`: manifest-only
+  `state:modified` view. Reports added/removed/modified models and
+  added/removed tests, plus tests attached to or depending on changed models.
+  `--fail-on-change` exits 1 for CI. No warehouse connection.
+- Tests in `tests/test_manifest_diff.py`.
+
 ## [2.0.0] - 2026-10-12
 ### Added
 - Full rewrite from scratch: hybrid Rust + Python (artifact-only)

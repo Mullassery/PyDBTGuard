@@ -97,6 +97,15 @@ pydbtguard cost /path/to/dbt/project
 
 The CLI expects compiled dbt artifacts (`target/manifest.json`). For historical failure probability, include `target/run_results.json` (or multiple runs accumulated by your process).
 
+## Manifest diff (state:modified without a warehouse)
+
+```bash
+pydbtguard diff base/target/manifest.json current/target/manifest.json --fail-on-change
+```
+
+Reports added/removed/modified models, added/removed tests, and tests attached
+to or depending on changed models. Reads artifacts only.
+
 ## Documentation
 
 - [Roadmap & honest limitations](ROADMAP_HONEST.md)
