@@ -38,7 +38,7 @@ runs:
       shell: bash
       run: |
         set -euo pipefail
-        ARGS=(diff "${{ inputs.base-manifest }}" "${{ inputs.current-manifest }}")
+        ARGS=(diff "${{ inputs.base-manifest }}" "${{ inputs.current-manifest }}" --format markdown)
         if [ "${{ inputs.fail-on-change }}" = "true" ]; then
           ARGS+=(--fail-on-change)
         fi

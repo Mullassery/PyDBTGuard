@@ -51,3 +51,14 @@ def test_identical_manifests_have_no_changes():
 def test_missing_nodes_is_rejected():
     with pytest.raises(ValueError, match="nodes"):
         diff_manifests({}, _manifest("base"))
+
+
+def test_markdown_rendering_contains_sections():
+    from pydbtguard.manifest_diff import render_markdown
+
+    base = _manifest("base")
+    current = _manifest("added", checksum="b")
+    text = render_markdown(diff_manifests(base, current))
+    assert "## PyDBTGuard manifest diff" in text
+    assert "### Added models (1)" in text
+    assert "`model.proj.new`" in text

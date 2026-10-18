@@ -100,7 +100,7 @@ The CLI expects compiled dbt artifacts (`target/manifest.json`). For historical 
 ## Manifest diff (state:modified without a warehouse)
 
 ```bash
-pydbtguard diff base/target/manifest.json current/target/manifest.json --fail-on-change
+pydbtguard diff base/target/manifest.json current/target/manifest.json --format markdown --fail-on-change
 ```
 
 Reports added/removed/modified models, added/removed tests, and tests attached

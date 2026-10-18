@@ -136,3 +136,25 @@ def render_text(diff: ManifestDiff) -> str:
 
 def load_manifest(path: str) -> Dict[str, Any]:
     return _load(path)
+
+
+def render_markdown(diff: ManifestDiff) -> str:
+    if not diff.has_changes:
+        return "No manifest changes."
+    lines = ["## PyDBTGuard manifest diff", ""]
+
+    def section(title: str, values: list[str], code: bool = False) -> None:
+        if not values:
+            return
+        lines.append(f"### {title} ({len(values)})")
+        for value in values:
+            lines.append(f"- `{value}`" if code else f"- {value}")
+        lines.append("")
+
+    section("Added models", diff.added_models, code=True)
+    section("Removed models", diff.removed_models, code=True)
+    section("Modified models", diff.modified_models, code=True)
+    section("Added tests", diff.added_tests, code=True)
+    section("Removed tests", diff.removed_tests, code=True)
+    section("Tests attached to changed models", diff.affected_tests, code=True)
+    return "\n".join(lines).rstrip()
