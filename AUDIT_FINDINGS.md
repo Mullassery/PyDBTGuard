@@ -50,7 +50,8 @@ Fix distribution and stubs first; otherwise freeze.
 
 Added `pydbtguard diff BASE CURRENT` (manifest-only `state:modified`) with
 added/removed/modified models, added/removed tests, and affected-test mapping.
-`--fail-on-change` gates CI. Tests: 3 passed. Version `2.1.0`.
+`--fail-on-change` gates CI. Tests: 3 passed. Version `2.1.0`. A composite
+GitHub Action + example is in `.github/actions/dbt-diff` / `docs/CI.md`.
 
-Still open: publishing to PyPI, wiring the diff into a PR-comment action, and
-replacing the remaining stubbed commands.
+Still open: publishing to PyPI, verifying the PR action on a real dbt project,
+and replacing the remaining stubbed commands.

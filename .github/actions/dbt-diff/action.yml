@@ -1,0 +1,45 @@
+name: PyDBTGuard manifest diff
+description: Compare two dbt manifest.json files and report state:modified + affected tests.
+inputs:
+  base-manifest:
+    description: Path to the base branch manifest.json.
+    required: true
+  current-manifest:
+    description: Path to the head branch manifest.json.
+    required: true
+  fail-on-change:
+    description: Fail the job when any model or test changed.
+    required: false
+    default: "false"
+  python-version:
+    description: Python version used to build/install PyDBTGuard.
+    required: false
+    default: "3.12"
+
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-python@v5
+      with:
+        python-version: ${{ inputs.python-version }}
+
+    - name: Install Rust toolchain
+      uses: dtolnay/rust-toolchain@stable
+
+    - name: Install PyDBTGuard from this action's repository
+      shell: bash
+      run: |
+        set -euo pipefail
+        ROOT="$GITHUB_ACTION_PATH/../../.."
+        python -m pip install --upgrade pip maturin
+        python -m pip install "$ROOT"
+
+    - name: Diff manifests
+      shell: bash
+      run: |
+        set -euo pipefail
+        ARGS=(diff "${{ inputs.base-manifest }}" "${{ inputs.current-manifest }}")
+        if [ "${{ inputs.fail-on-change }}" = "true" ]; then
+          ARGS+=(--fail-on-change)
+        fi
+        pydbtguard "${ARGS[@]}" | tee -a "$GITHUB_STEP_SUMMARY"

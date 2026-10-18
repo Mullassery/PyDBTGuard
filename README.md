@@ -106,6 +106,12 @@ pydbtguard diff base/target/manifest.json current/target/manifest.json --fail-on
 Reports added/removed/modified models, added/removed tests, and tests attached
 to or depending on changed models. Reads artifacts only.
 
+## CI
+
+A composite GitHub Action and PR example live in
+[`docs/CI.md`](docs/CI.md). It runs the manifest diff and writes the report to
+the job summary.
+
 ## Documentation
 
 - [Roadmap & honest limitations](ROADMAP_HONEST.md)
