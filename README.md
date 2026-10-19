@@ -117,6 +117,16 @@ the job summary.
 See [`docs/RELEASE.md`](docs/RELEASE.md) for the Trusted Publishing setup and
 the wheel matrix.
 
+## Known issues and deferred work
+
+**Blocked / failed:**
+- Verify the PR action on a real dbt project.
+
+**Rejected / deferred:**
+- Warehouse connectors now; static artifacts are the point.
+
+Full shipped/blocked/rejected detail: [`QUEUE_STATUS.md`](QUEUE_STATUS.md).
+
 ## Queue status
 
 Shipped, blocked/failed, and rejected work for this repository is documented in
