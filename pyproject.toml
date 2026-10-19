@@ -4,7 +4,7 @@ build-backend = "maturin"
 
 [project]
 name = "pydbtguard"
-version = "2.3.0"
+version = "2.4.0"
 description = "Pre-deployment validation for dbt tests, entirely from local dbt artifacts."
 readme = "README.md"
 requires-python = ">=3.9"
