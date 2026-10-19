@@ -209,3 +209,191 @@ def test_entry_point_plugins_are_discovered(monkeypatch):
     connector = get_connector("from_entry_point")
     assert isinstance(connector, EntryPointConnector)
     assert available_connectors()["from_entry_point"] == "fake:EntryPointConnector"
+
+
+# --- DuckDB (optional driver) -------------------------------------------------
+
+
+@pytest.fixture
+def duckdb_database(tmp_path):
+    duckdb = pytest.importorskip(
+        "duckdb", reason="optional 'duckdb' driver is not installed"
+    )
+    path = tmp_path / "warehouse.duckdb"
+    connection = duckdb.connect(str(path))
+    try:
+        connection.execute(
+            "CREATE TABLE customers (id INTEGER PRIMARY KEY, name VARCHAR, email VARCHAR)"
+        )
+        connection.executemany(
+            "INSERT INTO customers VALUES (?, ?, ?)",
+            [
+                (1, "Alice", "alice@example.com"),
+                (2, "Bob", "bob@example.com"),
+                (3, "Cara", "cara@example.com"),
+            ],
+        )
+    finally:
+        connection.close()
+    return path
+
+
+def test_duckdb_is_a_builtin_connector():
+    names = available_connectors()
+    assert "duckdb" in names
+    assert "postgres" in names
+    assert "duckdb" not in NOT_WIRED
+    assert "postgres" not in NOT_WIRED
+
+
+def test_duckdb_validates_and_fetches_real_rows(duckdb_database):
+    from pydbtguard.connectors import DuckDBConnector
+
+    connector = DuckDBConnector()
+    validation = connector.validate_query(
+        {"path": str(duckdb_database)}, "SELECT id, name FROM customers ORDER BY id"
+    )
+    assert validation.valid is True
+    assert validation.connector == "duckdb"
+
+    rows = connector.fetch(
+        {"path": str(duckdb_database)},
+        "SELECT id, name FROM customers ORDER BY id",
+        limit=2,
+    )
+    assert rows == [{"id": 1, "name": "Alice"}, {"id": 2, "name": "Bob"}]
+
+
+def test_duckdb_reports_invalid_sql_and_rejects_writes(duckdb_database):
+    from pydbtguard.connectors import DuckDBConnector
+
+    connector = DuckDBConnector()
+    invalid = connector.validate_query(
+        {"path": str(duckdb_database)}, "SELECT * FROM missing_table"
+    )
+    assert invalid.valid is False
+    assert "missing_table" in invalid.message
+
+    with pytest.raises(ConnectorError, match="read-only"):
+        connector.validate_query(
+            {"path": str(duckdb_database)}, "DELETE FROM customers"
+        )
+
+
+def test_query_cli_warehouse_duckdb(duckdb_database):
+    result = run(
+        "--json",
+        "query",
+        "--warehouse",
+        "duckdb",
+        "--database",
+        duckdb_database,
+        "--sql",
+        "SELECT id, name FROM customers ORDER BY id",
+        "--limit",
+        "1",
+    )
+
+    assert result.exit_code == 0, result.output
+    payload = json.loads(result.output)
+    assert payload["connector"] == "duckdb"
+    assert payload["rows"] == [{"id": 1, "name": "Alice"}]
+
+
+# --- Postgres (optional driver + local server) --------------------------------
+
+
+@pytest.fixture
+def postgres_dsn():
+    psycopg = pytest.importorskip(
+        "psycopg", reason="optional 'psycopg' driver is not installed"
+    )
+    import os
+
+    dsn = os.environ.get("PYDBTGUARD_TEST_POSTGRES_DSN")
+    if not dsn:
+        pytest.skip(
+            "set PYDBTGUARD_TEST_POSTGRES_DSN to a local Postgres server to run "
+            "this test"
+        )
+    try:
+        connection = psycopg.connect(dsn, connect_timeout=2)
+    except Exception as exc:  # noqa: BLE001 - report the real reason in the skip
+        pytest.skip(f"local Postgres server is not reachable: {exc}")
+    else:
+        connection.close()
+    return dsn
+
+
+def test_postgres_fetches_real_rows_from_a_local_server(postgres_dsn):
+    import uuid
+
+    import psycopg
+
+    from pydbtguard.connectors import PostgresConnector
+
+    table = f"pydbtguard_test_{uuid.uuid4().hex}"
+    with (
+        psycopg.connect(postgres_dsn) as connection,
+        connection.cursor() as cursor,
+    ):
+        cursor.execute(f'CREATE TABLE "{table}" (id INTEGER, name TEXT)')
+        cursor.executemany(
+            f'INSERT INTO "{table}" (id, name) VALUES (%s, %s)',
+            [(1, "Alice"), (2, "Bob")],
+        )
+
+    try:
+        connector = PostgresConnector()
+        validation = connector.validate_query(
+            {"dsn": postgres_dsn}, f'SELECT id, name FROM "{table}" ORDER BY id'
+        )
+        assert validation.valid is True, validation.message
+        rows = connector.fetch(
+            {"dsn": postgres_dsn},
+            f'SELECT id, name FROM "{table}" ORDER BY id',
+            limit=1,
+        )
+        assert rows == [{"id": 1, "name": "Alice"}]
+    finally:
+        with (
+            psycopg.connect(postgres_dsn) as connection,
+            connection.cursor() as cursor,
+        ):
+            cursor.execute(f'DROP TABLE IF EXISTS "{table}"')
+
+
+def test_query_cli_warehouse_postgres(postgres_dsn):
+    import uuid
+
+    import psycopg
+
+    table = f"pydbtguard_test_{uuid.uuid4().hex}"
+    with (
+        psycopg.connect(postgres_dsn) as connection,
+        connection.cursor() as cursor,
+    ):
+        cursor.execute(f'CREATE TABLE "{table}" (id INTEGER, name TEXT)')
+        cursor.execute(f'INSERT INTO "{table}" (id, name) VALUES (1, %s)', ("Alice",))
+
+    try:
+        result = run(
+            "--json",
+            "query",
+            "--warehouse",
+            "postgres",
+            "--dsn",
+            postgres_dsn,
+            "--sql",
+            f'SELECT id, name FROM "{table}"',
+        )
+        assert result.exit_code == 0, result.output
+        payload = json.loads(result.output)
+        assert payload["connector"] == "postgres"
+        assert payload["rows"] == [{"id": 1, "name": "Alice"}]
+    finally:
+        with (
+            psycopg.connect(postgres_dsn) as connection,
+            connection.cursor() as cursor,
+        ):
+            cursor.execute(f'DROP TABLE IF EXISTS "{table}"')

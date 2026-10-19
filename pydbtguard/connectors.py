@@ -4,16 +4,23 @@ The analysis engine itself remains artifact-only. This module adds an explicit,
 opt-in way to run a small read-only query against a *local* database through a
 plugin, used by the ``pydbtguard query`` CLI command.
 
-Built-in connector: ``sqlite`` (stdlib ``sqlite3``, opened read-only). External
-connectors declare themselves with::
+Built-in connectors:
+
+* ``sqlite`` -- stdlib ``sqlite3``, opened read-only.
+* ``duckdb`` -- optional ``duckdb`` driver, opened read-only. Install with
+  ``pip install "pydbtguard[duckdb]"``.
+* ``postgres`` -- optional ``psycopg`` driver, read-only queries against a
+  local server you configure. Install with ``pip install "pydbtguard[postgres]"``.
+
+External connectors declare themselves with::
 
     [project.entry-points."pydbtguard.warehouse_connectors"]
     my_connector = "my_package.connectors:MyConnector"
 
 The entry point may be a ``WarehouseConnector`` subclass, an instance, or a
-zero-argument factory returning one. Snowflake, BigQuery, Redshift, Postgres,
-MySQL, and DuckDB are explicitly *not wired*: selecting one produces a clear
-error instead of a fake connection or a stubbed success.
+zero-argument factory returning one. Snowflake, BigQuery, Redshift, and MySQL
+remain explicitly *not wired*: selecting one produces a clear error instead of
+a fake connection or a stubbed success.
 """
 
 from __future__ import annotations
@@ -21,7 +28,8 @@ from __future__ import annotations
 import re
 import sqlite3
 from abc import ABC, abstractmethod
-from collections.abc import Mapping
+from collections.abc import Iterator, Mapping
+from contextlib import contextmanager
 from dataclasses import dataclass
 from importlib import metadata
 from pathlib import Path
@@ -35,9 +43,7 @@ NOT_WIRED: dict[str, str] = {
     "snowflake": "no Snowflake driver or credentials are configured",
     "bigquery": "no BigQuery client or credentials are configured",
     "redshift": "no Redshift driver or credentials are configured",
-    "postgres": "no Postgres driver or credentials are configured",
     "mysql": "no MySQL driver or credentials are configured",
-    "duckdb": "the optional DuckDB driver is not bundled",
 }
 
 
@@ -102,7 +108,82 @@ def _read_only_connection(path: Path) -> sqlite3.Connection:
 def _json_value(value: Any) -> Any:
     if isinstance(value, bytes):
         return value.hex()
-    return value
+    if value is None or isinstance(value, (str, int, float, bool)):
+        return value
+    return str(value)
+
+
+def _import_duckdb() -> Any:
+    try:
+        import duckdb
+    except ImportError as exc:
+        raise ConnectorError(
+            "duckdb connector requires the optional 'duckdb' package; install "
+            "it with: pip install \"pydbtguard[duckdb]\""
+        ) from exc
+    return duckdb
+
+
+def _duckdb_path(config: Mapping[str, Any]) -> Path:
+    raw = config.get("path", config.get("database"))
+    if not isinstance(raw, str) or not raw:
+        raise ConnectorError("duckdb connector requires a 'path' (or 'database')")
+    path = Path(raw).expanduser().resolve()
+    if not path.is_file():
+        raise ConnectorError(f"duckdb database not found: {path}")
+    return path
+
+
+def _import_psycopg() -> Any:
+    try:
+        import psycopg
+    except ImportError as exc:
+        raise ConnectorError(
+            "postgres connector requires the optional 'psycopg' package; install "
+            "it with: pip install \"pydbtguard[postgres]\""
+        ) from exc
+    return psycopg
+
+
+def _postgres_connect_kwargs(config: Mapping[str, Any]) -> dict[str, Any]:
+    dsn = config.get("dsn", config.get("database_url"))
+    if dsn is not None:
+        if not isinstance(dsn, str) or not dsn:
+            raise ConnectorError("postgres 'dsn' must be a non-empty string")
+        return {"conninfo": dsn}
+    kwargs: dict[str, Any] = {
+        "host": config.get("host", "localhost"),
+        "port": config.get("port", 5432),
+        "connect_timeout": config.get("connect_timeout", 5),
+    }
+    database = config.get("dbname", config.get("database"))
+    if database:
+        kwargs["dbname"] = database
+    user = config.get("user", config.get("username"))
+    if user:
+        kwargs["user"] = user
+    if config.get("password"):
+        kwargs["password"] = config["password"]
+    if config.get("sslmode"):
+        kwargs["sslmode"] = config["sslmode"]
+    return kwargs
+
+
+@contextmanager
+def _postgres_connection(
+    config: Mapping[str, Any], *, read_only: bool = True
+) -> Iterator[Any]:
+    psycopg = _import_psycopg()
+    kwargs = _postgres_connect_kwargs(config)
+    try:
+        connection = psycopg.connect(**kwargs)
+    except psycopg.Error as exc:
+        raise ConnectorError(f"postgres connection failed: {exc}") from exc
+    try:
+        connection.read_only = read_only
+        yield connection
+    finally:
+        connection.close()
 
 
 class SQLiteConnector(WarehouseConnector):
@@ -148,7 +229,122 @@ class SQLiteConnector(WarehouseConnector):
             raise ConnectorError(f"sqlite query failed: {exc}") from exc
 
 
-_REGISTRY: dict[str, Any] = {"sqlite": SQLiteConnector}
+class DuckDBConnector(WarehouseConnector):
+    """Read-only queries against a real local DuckDB file.
+
+    DuckDB is an optional dependency. The database is opened with
+    ``read_only=True`` and queries are restricted to a single ``SELECT``/
+    ``WITH`` statement before execution.
+    """
+
+    name = "duckdb"
+
+    def validate_query(
+        self, config: Mapping[str, Any], sql: str
+    ) -> QueryValidation:
+        statement = _read_only_sql(sql)
+        path = _duckdb_path(config)
+        duckdb = _import_duckdb()
+        try:
+            connection = duckdb.connect(str(path), read_only=True)
+            try:
+                connection.execute(f"EXPLAIN {statement}").fetchall()
+            finally:
+                connection.close()
+        except duckdb.Error as exc:
+            return QueryValidation(self.name, False, str(exc))
+        return QueryValidation(self.name, True, "query is valid and read-only")
+
+    def fetch(
+        self, config: Mapping[str, Any], sql: str, limit: int = 100
+    ) -> list[dict[str, Any]]:
+        if limit < 1:
+            raise ConnectorError("limit must be >= 1")
+        validation = self.validate_query(config, sql)
+        if not validation.valid:
+            raise ConnectorError(f"query validation failed: {validation.message}")
+        statement = _read_only_sql(sql)
+        path = _duckdb_path(config)
+        duckdb = _import_duckdb()
+        try:
+            connection = duckdb.connect(str(path), read_only=True)
+            try:
+                cursor = connection.execute(statement)
+                columns = [column[0] for column in cursor.description]
+                return [
+                    {
+                        column: _json_value(value)
+                        for column, value in zip(columns, row)
+                    }
+                    for row in cursor.fetchmany(limit)
+                ]
+            finally:
+                connection.close()
+        except duckdb.Error as exc:
+            raise ConnectorError(f"duckdb query failed: {exc}") from exc
+
+
+class PostgresConnector(WarehouseConnector):
+    """Read-only queries against a Postgres server via optional ``psycopg``.
+
+    This is a skeleton: no driver is bundled and no live-warehouse support is
+    claimed. Config may contain a ``dsn`` (or ``database_url``) or individual
+    ``host``/``port``/``database``/``user``/``password`` fields. Connections
+    are opened read-only and limited to one ``SELECT``/``WITH`` statement.
+    """
+
+    name = "postgres"
+
+    def validate_query(
+        self, config: Mapping[str, Any], sql: str
+    ) -> QueryValidation:
+        statement = _read_only_sql(sql)
+        psycopg = _import_psycopg()
+        try:
+            with (
+                _postgres_connection(config) as connection,
+                connection.cursor() as cursor,
+            ):
+                cursor.execute(f"EXPLAIN {statement}")
+                cursor.fetchall()
+        except psycopg.Error as exc:
+            return QueryValidation(self.name, False, str(exc))
+        return QueryValidation(self.name, True, "query is valid and read-only")
+
+    def fetch(
+        self, config: Mapping[str, Any], sql: str, limit: int = 100
+    ) -> list[dict[str, Any]]:
+        if limit < 1:
+            raise ConnectorError("limit must be >= 1")
+        validation = self.validate_query(config, sql)
+        if not validation.valid:
+            raise ConnectorError(f"query validation failed: {validation.message}")
+        statement = _read_only_sql(sql)
+        psycopg = _import_psycopg()
+        try:
+            with (
+                _postgres_connection(config) as connection,
+                connection.cursor() as cursor,
+            ):
+                cursor.execute(statement)
+                columns = [column[0] for column in cursor.description]
+                rows = cursor.fetchmany(limit)
+                return [
+                    {
+                        column: _json_value(value)
+                        for column, value in zip(columns, row)
+                    }
+                    for row in rows
+                ]
+        except psycopg.Error as exc:
+            raise ConnectorError(f"postgres query failed: {exc}") from exc
+
+
+_REGISTRY: dict[str, Any] = {
+    "sqlite": SQLiteConnector,
+    "duckdb": DuckDBConnector,
+    "postgres": PostgresConnector,
+}
 
 
 def register_connector(name: str, factory: Any) -> None:
@@ -221,6 +417,8 @@ __all__ = [
     "ENTRY_POINT_GROUP",
     "NOT_WIRED",
     "ConnectorError",
+    "DuckDBConnector",
+    "PostgresConnector",
     "QueryValidation",
     "SQLiteConnector",
     "WarehouseConnector",

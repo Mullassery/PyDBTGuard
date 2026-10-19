@@ -22,13 +22,17 @@ dependencies = ["click>=8.1"]
 
 [project.optional-dependencies]
 lineage = ["sqlglot>=25.0"]
-dev = ["pytest>=7.0", "maturin>=1.5,<2.0"]
+duckdb = ["duckdb>=1.0"]
+postgres = ["psycopg[binary]>=3.1"]
+dev = ["pytest>=7.0", "maturin>=1.5,<2.0", "duckdb>=1.0"]
 
 [project.scripts]
 pydbtguard = "pydbtguard.cli:main"
 
 [project.entry-points."pydbtguard.warehouse_connectors"]
 sqlite = "pydbtguard.connectors:SQLiteConnector"
+duckdb = "pydbtguard.connectors:DuckDBConnector"
+postgres = "pydbtguard.connectors:PostgresConnector"
 
 [project.urls]
 Homepage = "https://github.com/Mullassery/PyDBTGuard"

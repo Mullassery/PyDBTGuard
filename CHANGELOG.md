@@ -1,5 +1,21 @@
 # Changelog
 
+## [Unreleased]
+### Added
+- Optional local DuckDB connector (`duckdb` extra) with real read-only
+  validation and fetches against temporary DuckDB databases.
+- Optional Postgres connector skeleton (`postgres` extra, `psycopg`) for a
+  local server. Tests require `PYDBTGUARD_TEST_POSTGRES_DSN` and skip with an
+  explicit reason when no server or driver is available.
+- `pydbtguard query --warehouse duckdb|postgres` plus `--dsn`/`DATABASE_URL`
+  for Postgres. The existing `--connector`/`--database` SQLite path remains.
+- Tests cover real DuckDB reads and query validation; Postgres tests never fake
+  success and skip cleanly.
+
+### Changed
+- `pydbtguard connectors` now lists DuckDB and Postgres as available optional
+  plugins; Snowflake, BigQuery, Redshift, and MySQL remain explicitly unwired.
+
 ## [2.3.0] - 2026-10-20
 ### Added
 - Warehouse-connector plugin interface (`pydbtguard.connectors.WarehouseConnector`)

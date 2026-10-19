@@ -8,6 +8,7 @@ clean exit code 1 with a message), never swallowed.
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 from typing import Any, Callable
 
@@ -474,12 +475,28 @@ def connectors_command(ctx: click.Context) -> None:
 
 
 @cli.command("query")
-@click.option("--connector", "connector_name", default="sqlite", show_default=True)
+@click.option(
+    "--connector",
+    "connector_name",
+    default=None,
+    help="Connector plugin name (defaults to --warehouse, or sqlite).",
+)
+@click.option(
+    "--warehouse",
+    type=click.Choice(["duckdb", "postgres"]),
+    default=None,
+    help="Select a bundled optional warehouse connector.",
+)
 @click.option(
     "--database",
-    required=True,
+    default=None,
     type=click.Path(exists=True, dir_okay=False),
-    help="Path to the local SQLite database.",
+    help="Path to a local SQLite or DuckDB database.",
+)
+@click.option(
+    "--dsn",
+    default=None,
+    help="Postgres DSN (defaults to $DATABASE_URL).",
 )
 @click.option("--sql", "sql_query", required=True, help="Read-only SQL query.")
 @click.option("--limit", default=10, show_default=True, type=click.IntRange(min=1))
@@ -489,8 +506,10 @@ def connectors_command(ctx: click.Context) -> None:
 @click.pass_context
 def query(
     ctx: click.Context,
-    connector_name: str,
-    database: str,
+    connector_name: str | None,
+    warehouse: str | None,
+    database: str | None,
+    dsn: str | None,
     sql_query: str,
     limit: int,
     validate_only: bool,
@@ -498,16 +517,34 @@ def query(
     """Validate or fetch a few rows from a local database via a connector plugin."""
     from .connectors import ConnectorError, get_connector
 
+    if connector_name and warehouse and connector_name != warehouse:
+        raise click.ClickException(
+            f"--connector {connector_name!r} conflicts with --warehouse {warehouse!r}"
+        )
+    selected = warehouse or connector_name or "sqlite"
     try:
-        connector = get_connector(connector_name)
-        config = {"path": database}
+        if selected == "postgres":
+            connection_dsn = dsn or os.environ.get("DATABASE_URL")
+            if not connection_dsn:
+                raise click.ClickException(
+                    "--dsn (or DATABASE_URL) is required for the postgres connector"
+                )
+            config = {"dsn": connection_dsn}
+        else:
+            if not database:
+                raise click.ClickException(
+                    f"--database is required for the {selected} connector"
+                )
+            config = {"path": database}
+
+        connector = get_connector(selected)
         validation = connector.validate_query(config, sql_query)
         if not validation.valid:
             raise click.ClickException(
                 f"query validation failed: {validation.message}"
             )
         payload = {
-            "connector": connector_name,
+            "connector": selected,
             "validated": True,
             "message": validation.message,
         }
@@ -522,9 +559,9 @@ def query(
         _dump(payload)
         return
     if validate_only:
-        click.echo(f"{connector_name}: {validation.message}")
+        click.echo(f"{selected}: {validation.message}")
         return
-    click.echo(f"{payload['row_count']} row(s) from {connector_name}:")
+    click.echo(f"{payload['row_count']} row(s) from {selected}:")
     for row in payload["rows"]:
         click.echo("  " + json.dumps(row, sort_keys=True))
 
