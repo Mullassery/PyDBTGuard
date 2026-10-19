@@ -117,6 +117,11 @@ the job summary.
 See [`docs/RELEASE.md`](docs/RELEASE.md) for the Trusted Publishing setup and
 the wheel matrix.
 
+## Queue status
+
+Shipped, blocked/failed, and rejected work for this repository is documented in
+[`QUEUE_STATUS.md`](QUEUE_STATUS.md).
+
 ## Documentation
 
 - [Roadmap & honest limitations](ROADMAP_HONEST.md)
