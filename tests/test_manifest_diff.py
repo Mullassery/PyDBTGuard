@@ -1,7 +1,5 @@
 """Tests for dbt manifest comparison."""
 
-import json
-
 import pytest
 
 from pydbtguard.manifest_diff import diff_manifests, render_text
@@ -32,7 +30,9 @@ def _manifest(mode: str, checksum: str = "a", columns=None):
 
 def test_detects_added_modified_and_affected_tests():
     base = _manifest("base", checksum="a")
-    current = _manifest("added", checksum="b", columns={"id": {"name": "id"}, "x": {"name": "x"}})
+    current = _manifest(
+        "added", checksum="b", columns={"id": {"name": "id"}, "x": {"name": "x"}}
+    )
     diff = diff_manifests(base, current)
 
     assert diff.added_models == ["model.proj.new"]
@@ -62,3 +62,66 @@ def test_markdown_rendering_contains_sections():
     assert "## PyDBTGuard manifest diff" in text
     assert "### Added models (1)" in text
     assert "`model.proj.new`" in text
+
+
+def _lineage_manifest():
+    nodes = {
+        "model.proj.raw": {
+            "resource_type": "model",
+            "name": "raw",
+            "checksum": {"checksum": "a"},
+            "depends_on": {"nodes": []},
+        },
+        "model.proj.mid": {
+            "resource_type": "model",
+            "name": "mid",
+            "checksum": {"checksum": "m"},
+            "depends_on": {"nodes": ["model.proj.raw"]},
+        },
+        "model.proj.final": {
+            "resource_type": "model",
+            "name": "final",
+            "checksum": {"checksum": "f"},
+            "depends_on": {"nodes": ["model.proj.mid"]},
+        },
+        "test.proj.final_not_null": {
+            "resource_type": "test",
+            "name": "final_not_null",
+            "attached_node": "model.proj.final",
+            "depends_on": {"nodes": ["model.proj.final"]},
+        },
+        "test.proj.raw_unique": {
+            "resource_type": "test",
+            "name": "raw_unique",
+            "attached_node": "model.proj.raw",
+            "depends_on": {"nodes": ["model.proj.raw"]},
+        },
+    }
+    return {"nodes": nodes}
+
+
+def test_select_includes_downstream_models_and_tests():
+    from pydbtguard.manifest_diff import select_tests
+
+    base = _lineage_manifest()
+    current = _lineage_manifest()
+    current["nodes"]["model.proj.raw"]["checksum"]["checksum"] = "changed"
+
+    selection = select_tests(base, current)
+    assert "model.proj.raw" in selection.selected_models
+    assert "model.proj.mid" in selection.selected_models
+    assert "model.proj.final" in selection.selected_models
+    assert "test.proj.raw_unique" in selection.selected_tests
+    assert "test.proj.final_not_null" in selection.selected_tests
+
+
+def test_select_can_exclude_downstream():
+    from pydbtguard.manifest_diff import select_tests
+
+    base = _lineage_manifest()
+    current = _lineage_manifest()
+    current["nodes"]["model.proj.raw"]["checksum"]["checksum"] = "changed"
+
+    selection = select_tests(base, current, include_downstream=False)
+    assert selection.selected_models == ["model.proj.raw"]
+    assert "model.proj.mid" not in selection.selected_models

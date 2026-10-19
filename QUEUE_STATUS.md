@@ -5,6 +5,8 @@ This file records what was shipped, what is blocked/failed, and what is rejected
 ## Shipped
 - Manifest diff, Markdown PR output, release workflow (2.2.0).
 - Published `pydbtguard 2.2.0` to PyPI.
+- `state:modified+` downstream test selection (`pydbtguard select`).
+- Optional SQLGlot column-level lineage (`pydbtguard columns`).
 
 ## Blocked / failed
 - Verify the PR action on a real dbt project.

@@ -21,6 +21,7 @@ classifiers = [
 dependencies = ["click>=8.1"]
 
 [project.optional-dependencies]
+lineage = ["sqlglot>=25.0"]
 dev = ["pytest>=7.0", "maturin>=1.5,<2.0"]
 
 [project.scripts]

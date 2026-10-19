@@ -20,3 +20,10 @@ except ImportError as exc:  # pragma: no cover - exercised only when unbuilt
 __version__ = _core.engine_version()
 
 __all__ = ["__version__", "_core"]
+
+from .column_lineage import (
+    LineageUnavailable,
+    ModelColumnLineage,
+    analyze_manifest_column_lineage,
+    analyze_model_sql,
+)

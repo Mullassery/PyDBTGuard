@@ -70,6 +70,93 @@ class ManifestDiff:
         }
 
 
+@dataclass
+class ManifestSelection:
+    """dbt ``state:modified+``-style selection.
+
+    ``selected_models`` includes modified/added models and their downstream
+    dependents; ``selected_tests`` includes tests attached to or depending on
+    any selected model. Removed models are reported separately because dbt
+    cannot select a node that no longer exists.
+    """
+
+    changed_models: List[str] = field(default_factory=list)
+    selected_models: List[str] = field(default_factory=list)
+    selected_tests: List[str] = field(default_factory=list)
+    removed_models: List[str] = field(default_factory=list)
+    include_downstream: bool = True
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "changed_models": self.changed_models,
+            "selected_models": self.selected_models,
+            "selected_tests": self.selected_tests,
+            "removed_models": self.removed_models,
+            "include_downstream": self.include_downstream,
+        }
+
+    def dbt_select_args(self) -> List[str]:
+        """Arguments for ``dbt build --select ...``."""
+        values = list(self.selected_models) + list(self.selected_tests)
+        return values
+
+
+def _model_children(nodes: Dict[str, Any]) -> Dict[str, Set[str]]:
+    children: Dict[str, Set[str]] = {}
+    for unique_id, node in nodes.items():
+        if not _is_model(node):
+            continue
+        for parent in (node.get("depends_on") or {}).get("nodes") or []:
+            children.setdefault(str(parent), set()).add(unique_id)
+    return children
+
+
+def _downstream_closure(seeds: Set[str], children: Dict[str, Set[str]]) -> Set[str]:
+    selected: Set[str] = set()
+    queue = list(seeds)
+    while queue:
+        current = queue.pop()
+        if current in selected:
+            continue
+        selected.add(current)
+        queue.extend(children.get(current, set()) - selected)
+    return selected
+
+
+def select_tests(
+    base: Dict[str, Any],
+    current: Dict[str, Any],
+    *,
+    include_downstream: bool = True,
+) -> ManifestSelection:
+    """Produce a dbt state:modified(+)-style test selection."""
+    diff = diff_manifests(base, current)
+    current_nodes = _nodes(current)
+    current_models = {k: v for k, v in current_nodes.items() if _is_model(v)}
+    current_tests = {k: v for k, v in current_nodes.items() if _is_test(v)}
+
+    changed = set(diff.modified_models) | set(diff.added_models)
+    if include_downstream:
+        selected_models = _downstream_closure(changed, _model_children(current_nodes))
+    else:
+        selected_models = set(changed)
+
+    selected_tests: Set[str] = set()
+    for test_id, test in current_tests.items():
+        attached = test.get("attached_node")
+        depends = set((test.get("depends_on") or {}).get("nodes") or [])
+        if attached in selected_models or depends & selected_models:
+            selected_tests.add(test_id)
+
+    return ManifestSelection(
+        changed_models=sorted(changed),
+        selected_models=sorted(selected_models & set(current_models)),
+        selected_tests=sorted(selected_tests),
+        removed_models=sorted(diff.removed_models),
+        include_downstream=include_downstream,
+    )
+
+
 def _is_model(node: Dict[str, Any]) -> bool:
     return node.get("resource_type") == "model"
 

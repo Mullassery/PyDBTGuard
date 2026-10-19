@@ -308,6 +308,58 @@ def drift(ctx: click.Context, old_path: str, new_path: str) -> None:
         click.echo(f"  {node['unique_id']}: {'; '.join(parts)}")
 
 
+@cli.command("select")
+@click.argument("base_manifest", type=click.Path(exists=True, dir_okay=False))
+@click.argument("current_manifest", type=click.Path(exists=True, dir_okay=False))
+@click.option(
+    "--format", "output_format", type=click.Choice(["text", "json"]), default="text"
+)
+@click.option(
+    "--downstream/--no-downstream",
+    default=True,
+    help="Include downstream dependents (default) or only changed models.",
+)
+@click.option("--fail-on-empty", is_flag=True, help="Exit 1 when nothing is selected.")
+@click.pass_context
+def select(
+    ctx: click.Context,
+    base_manifest: str,
+    current_manifest: str,
+    output_format: str,
+    downstream: bool,
+    fail_on_empty: bool,
+) -> None:
+    """Select models/tests to run for changed dbt models (state:modified+)."""
+    from .manifest_diff import load_manifest, select_tests
+
+    try:
+        selection = select_tests(
+            load_manifest(base_manifest),
+            load_manifest(current_manifest),
+            include_downstream=downstream,
+        )
+    except (OSError, ValueError) as exc:
+        raise click.ClickException(str(exc)) from exc
+
+    empty = not selection.selected_models and not selection.selected_tests
+    if ctx.obj["as_json"] or output_format == "json":
+        _dump(selection.to_dict())
+    else:
+        if empty:
+            click.echo("No models or tests selected.")
+        else:
+            click.echo("--select " + " ".join(selection.dbt_select_args()))
+            click.echo("")
+            click.echo(f"Models ({len(selection.selected_models)}):")
+            for value in selection.selected_models:
+                click.echo(f"  {value}")
+            click.echo(f"Tests ({len(selection.selected_tests)}):")
+            for value in selection.selected_tests:
+                click.echo(f"  {value}")
+    if fail_on_empty and empty:
+        raise click.exceptions.Exit(1)
+
+
 @cli.command()
 @click.argument("base_manifest", type=click.Path(exists=True, dir_okay=False))
 @click.argument("current_manifest", type=click.Path(exists=True, dir_okay=False))
@@ -332,10 +384,17 @@ def diff(
     fail_on_change: bool,
 ) -> None:
     """Compare two dbt manifest.json files (state:modified without a warehouse)."""
-    from .manifest_diff import diff_manifests, load_manifest, render_markdown, render_text
+    from .manifest_diff import (
+        diff_manifests,
+        load_manifest,
+        render_markdown,
+        render_text,
+    )
 
     try:
-        result = diff_manifests(load_manifest(base_manifest), load_manifest(current_manifest))
+        result = diff_manifests(
+            load_manifest(base_manifest), load_manifest(current_manifest)
+        )
     except (OSError, ValueError) as exc:
         raise click.ClickException(str(exc)) from exc
 
@@ -348,6 +407,40 @@ def diff(
 
     if fail_on_change and result.has_changes:
         raise click.exceptions.Exit(1)
+
+
+@cli.command("columns")
+@click.argument("manifest", type=click.Path(exists=True, dir_okay=False))
+@click.option(
+    "--model", "model_filter", default=None, help="Filter by model unique_id substring"
+)
+@click.option("--dialect", default=None, help="SQLGlot dialect")
+@click.option(
+    "--format", "output_format", type=click.Choice(["text", "json"]), default="text"
+)
+@click.pass_context
+def columns(ctx, manifest, model_filter, dialect, output_format):
+    """Show column-level lineage for dbt models in a manifest."""
+    from .column_lineage import LineageUnavailable, analyze_manifest_column_lineage
+
+    try:
+        results = analyze_manifest_column_lineage(
+            manifest, dialect=dialect, model_filter=model_filter
+        )
+    except LineageUnavailable as exc:
+        raise click.ClickException(str(exc)) from exc
+    except (OSError, ValueError) as exc:
+        raise click.ClickException(str(exc)) from exc
+
+    if ctx.obj["as_json"] or output_format == "json":
+        _dump([r.to_dict() for r in results])
+        return
+    for result in results:
+        click.echo(result.model)
+        for output, sources in result.outputs.items():
+            click.echo(f"  {output} <- {', '.join(sources) or '(unknown)'}")
+        for warning in result.warnings:
+            click.echo(f"  warning: {warning}")
 
 
 def main() -> None:

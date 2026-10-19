@@ -104,6 +104,39 @@ def test_freshness_reshapes_sources_json(project: Path) -> None:
     assert "error=1" in result.output
 
 
+def test_select_includes_downstream_by_default(tmp_path: Path) -> None:
+    nodes = {
+        "model.proj.raw": {
+            "resource_type": "model",
+            "name": "raw",
+            "checksum": {"checksum": "a"},
+            "depends_on": {"nodes": []},
+        },
+        "model.proj.mid": {
+            "resource_type": "model",
+            "name": "mid",
+            "checksum": {"checksum": "m"},
+            "depends_on": {"nodes": ["model.proj.raw"]},
+        },
+    }
+    base = tmp_path / "base.json"
+    current = tmp_path / "current.json"
+    base.write_text(json.dumps({"nodes": nodes}))
+    changed = json.loads(json.dumps(nodes))
+    changed["model.proj.raw"]["checksum"]["checksum"] = "b"
+    current.write_text(json.dumps({"nodes": changed}))
+
+    result = run("--json", "select", base, current)
+    assert result.exit_code == 0, result.output
+    payload = json.loads(result.output)
+    assert payload["selected_models"] == ["model.proj.mid", "model.proj.raw"]
+
+    result = run("--json", "select", "--no-downstream", base, current)
+    assert result.exit_code == 0, result.output
+    payload = json.loads(result.output)
+    assert payload["selected_models"] == ["model.proj.raw"]
+
+
 def test_drift_compares_two_catalogs(fixtures_dir: Path) -> None:
     result = run(
         "drift",

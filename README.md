@@ -137,3 +137,36 @@ Full shipped/blocked/rejected detail: [`QUEUE_STATUS.md`](QUEUE_STATUS.md).
 ## License
 
 Licensed under the Apache License, Version 2.0. See [LICENSE](LICENSE) for details.
+
+### Select only affected tests (`state:modified+`)
+
+The diff engine now expands changed models to downstream dependents and selects
+the tests attached to any selected model, not only the directly changed one:
+
+```bash
+pydbtguard select target/base_manifest.json target/manifest.json
+pydbtguard select base.json current.json --no-downstream --format json
+```
+
+Output is ready for dbt:
+
+```
+--select model.proj.raw model.proj.mid model.proj.final test.proj.raw_unique ...
+```
+
+This complements `pydbtguard diff`, which reports the raw added/removed/modified
+sets. No warehouse or dbt run is required.
+
+### Column-level lineage
+
+`pydbtguard columns` parses compiled model SQL with SQLGlot and reports which
+source columns feed each output column, including CTE resolution:
+
+```bash
+pip install "pydbtguard[lineage]"
+pydbtguard columns target/manifest.json --model orders --format json
+```
+
+It reads only manifest SQL; SQLGlot is an optional dependency and the command
+exits with an install hint when it is absent.
+
