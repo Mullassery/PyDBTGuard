@@ -1,7 +1,9 @@
 # Roadmap (Honest)
 
-## Current state (v2.0.0)
+## Current state (v2.3.0)
 - Artifact-only analysis: analyze/coverage/blast-radius/cost/history/freshness/drift
+- Opt-in read-only local SQLite connector (`pydbtguard query`) via a plugin
+  interface; live warehouses remain unwired
 - Real behavior (no stubs, no fabricated scores when unknown)
 - Hybrid Rust core + thin Python CLI + PyO3
 - Fixtures + full test coverage passing

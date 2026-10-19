@@ -1,5 +1,16 @@
 # Changelog
 
+## [2.3.0] - 2026-10-20
+### Added
+- Warehouse-connector plugin interface (`pydbtguard.connectors.WarehouseConnector`)
+  with programmatic registration and the `pydbtguard.warehouse_connectors`
+  entry-point group.
+- Real local SQLite connector (stdlib `sqlite3`, opened read-only) used by the
+  new `pydbtguard query` command to validate a query or fetch a small table.
+- `pydbtguard connectors` lists available local plugins and explicitly unwired
+  warehouses (Snowflake, BigQuery, Redshift, Postgres, MySQL, DuckDB).
+- Tests use temporary SQLite databases; live warehouses remain unwired.
+
 ## [2.2.0] - 2026-10-19
 ### Added
 - `pydbtguard diff --format markdown` for PR comments/job summaries. The

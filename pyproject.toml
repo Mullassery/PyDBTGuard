@@ -4,7 +4,7 @@ build-backend = "maturin"
 
 [project]
 name = "pydbtguard"
-version = "2.2.0"
+version = "2.3.0"
 description = "Pre-deployment validation for dbt tests, entirely from local dbt artifacts."
 readme = "README.md"
 requires-python = ">=3.9"
@@ -26,6 +26,9 @@ dev = ["pytest>=7.0", "maturin>=1.5,<2.0"]
 
 [project.scripts]
 pydbtguard = "pydbtguard.cli:main"
+
+[project.entry-points."pydbtguard.warehouse_connectors"]
+sqlite = "pydbtguard.connectors:SQLiteConnector"
 
 [project.urls]
 Homepage = "https://github.com/Mullassery/PyDBTGuard"

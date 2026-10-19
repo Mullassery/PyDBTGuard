@@ -7,12 +7,15 @@ This file records what was shipped, what is blocked/failed, and what is rejected
 - Published `pydbtguard 2.2.0` to PyPI.
 - `state:modified+` downstream test selection (`pydbtguard select`).
 - Optional SQLGlot column-level lineage (`pydbtguard columns`).
+- Warehouse-connector plugin interface and a real read-only local SQLite
+  connector used by `pydbtguard query` (2.3.0).
 
 ## Blocked / failed
 - Verify the PR action on a real dbt project.
 
 ## Rejected / deferred
-- Warehouse connectors now; static artifacts are the point.
+- Live warehouse connectors; static artifacts remain the point. The only shipped
+  connector is opt-in, read-only, and local (SQLite).
 
 ## Policy
 

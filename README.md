@@ -40,6 +40,9 @@ PyDBTGuard reads compiled dbt metadata to help you understand which tests are ri
 - **Cost estimation**: Estimates relative test cost from manifest metadata.
 - **Diagnostics**: Generates diagnostic hints for tests based on patterns in names/config.
 - **CLI-first**: Simple commands to analyze, diagnose, audit coverage, and estimate cost.
+- **Opt-in local query connector**: `pydbtguard query` can validate a read-only
+  SQL statement or fetch a few rows from a local SQLite database through a
+  plugin. This is separate from the artifact-only analysis path.
 
 ## Who it's for / Use cases
 
@@ -51,13 +54,16 @@ PyDBTGuard reads compiled dbt metadata to help you understand which tests are ri
 ## What it is not
 
 - **Not a full dbt observability platform**: Focused on pre-deployment risk/impact analysis from artifacts; no alerting, dashboards, or SLA tracking.
-- **Not warehouse-connected**: Does not query Snowflake, BigQuery, or other warehouses. Warehouse connector classes exist in the codebase but are not wired to CLI commands.
+- **Not live-warehouse-connected**: Analysis uses only local dbt artifacts. The
+  optional `query` command talks to a local SQLite file through an explicit
+  plugin interface; Snowflake, BigQuery, Redshift, Postgres, MySQL, and DuckDB
+  are explicitly not wired and produce a clear error.
 - **Not ML-powered**: Reliability scoring uses fixed heuristics; failure probability is a historical failure rate computed from run history, not a trained model.
 - **Experimental in places**: Some commands (`optimize`, `pr-check`, `replay`) are stubs or simulated. See roadmap for details.
 
 ## Project status
 
-Version 2.0.0. Core analysis features (analyze, coverage-audit, diagnose, cost, blast radius) are implemented and tested (30/30 Python tests pass). Historical failure prediction is wired to the Rust core. Some features remain stubbed/simulated; see [ROADMAP_HONEST.md](ROADMAP_HONEST.md) for honest limitations.
+Version 2.3.0. Core analysis features (analyze, coverage-audit, diagnose, cost, blast radius) are implemented and tested. Historical failure prediction is wired to the Rust core. The opt-in local SQLite connector is real; live warehouses are not wired. Some features remain stubbed/simulated; see [ROADMAP_HONEST.md](ROADMAP_HONEST.md) for honest limitations.
 
 ## Installation
 
@@ -123,7 +129,8 @@ the wheel matrix.
 - Verify the PR action on a real dbt project.
 
 **Rejected / deferred:**
-- Warehouse connectors now; static artifacts are the point.
+- Live warehouse connectors; static artifacts remain the primary path. The only
+  shipped connector is opt-in, read-only, and local (SQLite).
 
 Full shipped/blocked/rejected detail: [`QUEUE_STATUS.md`](QUEUE_STATUS.md).
 
@@ -169,4 +176,47 @@ pydbtguard columns target/manifest.json --model orders --format json
 
 It reads only manifest SQL; SQLGlot is an optional dependency and the command
 exits with an install hint when it is absent.
+
+### Local warehouse connectors (opt-in)
+
+The plugin interface lives in `pydbtguard.connectors`. A connector subclasses
+`WarehouseConnector` and implements `validate_query` and `fetch`:
+
+```python
+from pydbtguard.connectors import (
+    QueryValidation, WarehouseConnector, get_connector, register_connector,
+)
+
+class MyConnector(WarehouseConnector):
+    name = "my_connector"
+
+    def validate_query(self, config, sql):
+        return QueryValidation(self.name, True, "validated")
+
+    def fetch(self, config, sql, limit=100):
+        return []  # real read-only I/O here
+
+register_connector("my_connector", MyConnector)
+```
+
+External packages can declare the `pydbtguard.warehouse_connectors`
+entry-point group instead of calling `register_connector`:
+
+```toml
+[project.entry-points."pydbtguard.warehouse_connectors"]
+my_connector = "my_package.connectors:MyConnector"
+```
+
+The bundled `sqlite` connector opens the database with SQLite's `mode=ro` URI
+and accepts only one `SELECT`/`WITH` statement:
+
+```bash
+pydbtguard connectors
+pydbtguard query --database ./warehouse.db --sql "SELECT * FROM customers" --limit 5
+pydbtguard query --database ./warehouse.db --sql "SELECT * FROM customers" --validate-only
+pydbtguard --json query --database ./warehouse.db --sql "SELECT * FROM customers"
+```
+
+Snowflake, BigQuery, Redshift, Postgres, MySQL, and DuckDB are listed by
+`pydbtguard connectors` as not wired. No live-warehouse support is claimed.
 

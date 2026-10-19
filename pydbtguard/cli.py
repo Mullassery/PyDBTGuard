@@ -443,6 +443,92 @@ def columns(ctx, manifest, model_filter, dialect, output_format):
             click.echo(f"  warning: {warning}")
 
 
+@cli.command("connectors")
+@click.pass_context
+def connectors_command(ctx: click.Context) -> None:
+    """List local warehouse-connector plugins and explicitly unwired warehouses."""
+    from .connectors import NOT_WIRED, available_connectors
+
+    available = [
+        {"name": name, "origin": origin}
+        for name, origin in sorted(available_connectors().items())
+    ]
+    payload = {
+        "available": available,
+        "not_wired": [
+            {"name": name, "reason": reason}
+            for name, reason in sorted(NOT_WIRED.items())
+        ],
+    }
+
+    if ctx.obj["as_json"]:
+        _dump(payload)
+        return
+
+    click.echo("Available local connectors:")
+    for connector in available:
+        click.echo(f"  {connector['name']} ({connector['origin']})")
+    click.echo("Not wired (no live-warehouse support):")
+    for connector in payload["not_wired"]:
+        click.echo(f"  {connector['name']}: {connector['reason']}")
+
+
+@cli.command("query")
+@click.option("--connector", "connector_name", default="sqlite", show_default=True)
+@click.option(
+    "--database",
+    required=True,
+    type=click.Path(exists=True, dir_okay=False),
+    help="Path to the local SQLite database.",
+)
+@click.option("--sql", "sql_query", required=True, help="Read-only SQL query.")
+@click.option("--limit", default=10, show_default=True, type=click.IntRange(min=1))
+@click.option(
+    "--validate-only", is_flag=True, help="Validate the query without returning rows."
+)
+@click.pass_context
+def query(
+    ctx: click.Context,
+    connector_name: str,
+    database: str,
+    sql_query: str,
+    limit: int,
+    validate_only: bool,
+) -> None:
+    """Validate or fetch a few rows from a local database via a connector plugin."""
+    from .connectors import ConnectorError, get_connector
+
+    try:
+        connector = get_connector(connector_name)
+        config = {"path": database}
+        validation = connector.validate_query(config, sql_query)
+        if not validation.valid:
+            raise click.ClickException(
+                f"query validation failed: {validation.message}"
+            )
+        payload = {
+            "connector": connector_name,
+            "validated": True,
+            "message": validation.message,
+        }
+        if not validate_only:
+            rows = connector.fetch(config, sql_query, limit=limit)
+            payload["row_count"] = len(rows)
+            payload["rows"] = rows
+    except ConnectorError as exc:
+        raise click.ClickException(str(exc)) from exc
+
+    if ctx.obj["as_json"]:
+        _dump(payload)
+        return
+    if validate_only:
+        click.echo(f"{connector_name}: {validation.message}")
+        return
+    click.echo(f"{payload['row_count']} row(s) from {connector_name}:")
+    for row in payload["rows"]:
+        click.echo("  " + json.dumps(row, sort_keys=True))
+
+
 def main() -> None:
     cli()
 

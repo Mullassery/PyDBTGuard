@@ -58,3 +58,14 @@ Added a release workflow (Linux/macOS/Windows/sdist + PyPI Trusted Publishing)
 and `docs/RELEASE.md`. Still open: the actual PyPI Trusted Publisher setup,
 verifying the PR action on a real dbt project, and replacing the remaining
 stubbed commands.
+
+Added a warehouse-connector plugin interface and a real local SQLite
+connector in version `2.3.0`:
+
+- Plugin interface: `pydbtguard.connectors.WarehouseConnector`, programmatic
+  registration, and the `pydbtguard.warehouse_connectors` entry-point group.
+- `pydbtguard query` validates or fetches a small read-only result from a local
+  SQLite database; `pydbtguard connectors` lists plugins.
+- Snowflake, BigQuery, Redshift, Postgres, MySQL, and DuckDB are explicitly not
+  wired; the artifact-only analysis path is unchanged.
+- Tests use temporary SQLite databases. No live-warehouse support is claimed.
