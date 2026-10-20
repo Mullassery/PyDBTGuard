@@ -79,7 +79,7 @@ dependencies = [
 
 [[package]]
 name = "pydbtguard-core"
-version = "2.4.1"
+version = "2.4.2"
 dependencies = [
  "serde",
  "serde_json",
@@ -88,7 +88,7 @@ dependencies = [
 
 [[package]]
 name = "pydbtguard-python"
-version = "2.4.1"
+version = "2.4.2"
 dependencies = [
  "pydbtguard-core",
  "pyo3",
