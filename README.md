@@ -65,7 +65,7 @@ PyDBTGuard reads compiled dbt metadata to help you understand which tests are ri
 
 ## Project status
 
-Version 2.3.0. Core analysis features (analyze, coverage-audit, diagnose, cost, blast radius) are implemented and tested. Historical failure prediction is wired to the Rust core. The opt-in SQLite and DuckDB connectors are real local read-only connectors; Postgres is an optional local-server skeleton. Live warehouses are not wired. Some features remain stubbed/simulated; see [ROADMAP_HONEST.md](ROADMAP_HONEST.md) for honest limitations.
+Version 2.4.0. Core analysis features (analyze, coverage-audit, diagnose, cost, blast radius) are implemented and tested. Historical failure prediction is wired to the Rust core. The opt-in SQLite, DuckDB, and Postgres connectors are real local read-only connectors (Postgres tests skip unless a local DSN is configured). Snowflake, BigQuery, Redshift, and MySQL are not wired. Some features remain stubbed/simulated; see [ROADMAP_HONEST.md](ROADMAP_HONEST.md) for honest limitations.
 
 ## Installation
 
