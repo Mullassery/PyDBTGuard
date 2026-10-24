@@ -56,6 +56,8 @@ starts, and record the decision in the PR or changelog.
 
 ## OSS gap analysis — 2026-10-24
 
+**What matters most here:** stay static, but close the loop. It cannot execute SQL/tests by design; the gaps to close are PR review comments and risk scoring validated against real dbt projects, not a warehouse connection.
+
 Scope: open-source dbt validation, observability, and review tools. The
 artifact-only constraint is a product boundary, not a defect. Dates and licenses
 were checked against primary repositories on 2026-10-24.
