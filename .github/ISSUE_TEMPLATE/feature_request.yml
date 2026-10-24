@@ -5,7 +5,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        This project has a lot of built-but-not-wired-up or partially-broken functionality already (see [ROADMAP_HONEST.md](https://github.com/Mullassery/PyDBTGuard/blob/main/ROADMAP_HONEST.md)). If your request is close to something already listed there, please reference it.
+        This project has a lot of built-but-not-wired-up or partially-broken functionality already (see [docs/internal/ROADMAP_HONEST.md](https://github.com/Mullassery/PyDBTGuard/blob/main/docs/internal/ROADMAP_HONEST.md)). If your request is close to something already listed there, please reference it.
   - type: textarea
     id: problem
     attributes:

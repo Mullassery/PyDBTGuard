@@ -5,7 +5,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        Before filing, please check [ROADMAP_HONEST.md](https://github.com/Mullassery/PyDBTGuard/blob/main/ROADMAP_HONEST.md) — several known-broken behaviors (packaging failure, fabricated replay data, inverted blast radius) are already documented there and don't need a new issue unless you have a fix.
+        Before filing, please check [docs/internal/ROADMAP_HONEST.md](https://github.com/Mullassery/PyDBTGuard/blob/main/docs/internal/ROADMAP_HONEST.md) — several known-broken behaviors (packaging failure, fabricated replay data, inverted blast radius) are already documented there and don't need a new issue unless you have a fix.
   - type: textarea
     id: what-happened
     attributes:
