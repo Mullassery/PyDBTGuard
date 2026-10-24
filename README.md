@@ -65,7 +65,7 @@ PyDBTGuard reads compiled dbt metadata to help you understand which tests are ri
 
 ## Project status
 
-Version 2.4.2. Core analysis features (analyze, coverage-audit, diagnose, cost, blast radius) are implemented and tested. Historical failure prediction is wired to the Rust core. The opt-in SQLite, DuckDB, and Postgres connectors are real local read-only connectors (Postgres tests skip unless a local DSN is configured). Snowflake, BigQuery, Redshift, and MySQL are not wired. Some features remain stubbed/simulated; see [ROADMAP_HONEST.md](ROADMAP_HONEST.md) for honest limitations.
+Version 2.4.2. Core analysis features (analyze, coverage-audit, diagnose, cost, blast radius) are implemented and tested. Historical failure prediction is wired to the Rust core. The opt-in SQLite, DuckDB, and Postgres connectors are real local read-only connectors (Postgres tests skip unless a local DSN is configured). Snowflake, BigQuery, Redshift, and MySQL are not wired. Some features remain stubbed/simulated; see [docs/internal/ROADMAP_HONEST.md](docs/internal/ROADMAP_HONEST.md) for honest limitations.
 
 ## Installation
 
@@ -135,11 +135,11 @@ the wheel matrix.
   connectors are opt-in and read-only: local SQLite and DuckDB, plus an
   optional Postgres skeleton for a local server.
 
-Full shipped/blocked/rejected detail: [`QUEUE_STATUS.md`](QUEUE_STATUS.md).
+Full shipped/blocked/rejected detail: [`docs/internal/QUEUE_STATUS.md`](docs/internal/QUEUE_STATUS.md).
 
 ## Documentation
 
-- [Roadmap & honest limitations](ROADMAP_HONEST.md)
+- [Roadmap & honest limitations](docs/internal/ROADMAP_HONEST.md)
 - [Contributing](CONTRIBUTING.md)
 - [Security policy](SECURITY.md)
 - [Code of conduct](CODE_OF_CONDUCT.md)

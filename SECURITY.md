@@ -9,7 +9,7 @@ expect a best-effort response, not a formal SLA.
 
 ## Current known security-relevant issues (disclosed, not hidden)
 
-These are tracked in detail in [ROADMAP_HONEST.md](ROADMAP_HONEST.md):
+These are tracked in detail in [docs/internal/ROADMAP_HONEST.md](docs/internal/ROADMAP_HONEST.md):
 
 - `pydbtguard/warehouse/snowflake.py` (`SnowflakeConnector.get_table_stats`)
   builds a SQL query via unparameterized f-string interpolation of
@@ -30,7 +30,7 @@ These are tracked in detail in [ROADMAP_HONEST.md](ROADMAP_HONEST.md):
 ## Scope
 
 PyDBTGuard, in its current state, does not connect to any warehouse at
-runtime from any CLI command (see README and ROADMAP_HONEST.md) — it only
+runtime from any CLI command (see README and docs/internal/ROADMAP_HONEST.md) — it only
 parses a local `target/manifest.json` file. The warehouse connector code
 exists but is not wired into any analysis path yet, so most warehouse
 credential handling described above is currently inert/untested code, not
